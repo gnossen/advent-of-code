@@ -1,5 +1,6 @@
 #include "1202.h"
 #include <stdlib.h>
+#include <string.h>
 
 static void advance(const uint64_t *start, const uint64_t **ip, size_t steps,
                     size_t prog_len) {
@@ -109,4 +110,16 @@ void execute_program(uint64_t *program, size_t len) {
       exit(1);
     }
   }
+}
+
+void execute_in_buffer(uint64_t *program, size_t len, uint64_t *buffer,
+                       size_t buffer_len) {
+  if (buffer_len < len) {
+    fprintf(stderr,
+            "Attempt to execute program of length %d in buffer of length %d.\n",
+            len, buffer_len);
+    exit(1);
+  }
+  memcpy(buffer, program, sizeof(uint64_t) * len);
+  execute_program(buffer, len);
 }

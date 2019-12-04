@@ -1,10 +1,13 @@
 .PHONY: all
-all: interpeter
+all: interpeter search
 
 %.o: %.c
 	gcc -c $< -o $@
 
 interpeter: interpreter.o 1202.o
+	gcc $^ -o $@
+
+search: search.o 1202.o
 	gcc $^ -o $@
 
 .PHONY: clean
