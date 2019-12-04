@@ -68,6 +68,10 @@ struct LineSegment {
   int64_t bottom() const { return std::min(a.y, b.y); }
 
   int64_t top() const { return std::max(a.y, b.y); }
+
+  // NOTE: This only works for axis-aligned line segments, which the problem
+  // statement guarantees.
+  int64_t length() const { return abs(a.x - b.x) + abs(a.y - b.y); }
 };
 
 std::ostream &operator<<(std::ostream &os, const LineSegment &s) {
@@ -162,14 +166,6 @@ void get_wires_as_line_segments(Container &a, Container &b, std::istream &is) {
   relative_to_absolute(points_b, b);
 }
 
-int64_t manhattan_distance(const Vector &a, const Vector &b) {
-  return abs(a.x - b.x) + abs(a.y - b.y);
-}
-
-int64_t manhattan_distance(const Vector &a) {
-  return manhattan_distance(a, Vector(0, 0));
-}
-
 int main(int argc, char **argv) {
   if (argc != 2) {
     std::cerr << "Usage: " << argv[0] << " filename" << std::endl;
@@ -181,19 +177,27 @@ int main(int argc, char **argv) {
   std::vector<LineSegment> wire_b;
   get_wires_as_line_segments(wire_a, wire_b, fs);
   std::vector<Vector> intersections;
+  std::vector<int64_t> steps;
+  int64_t head_length_a = 0;
   for (const auto &a : wire_a) {
+    int64_t head_length_b = 0;
     for (const auto &b : wire_b) {
       intersects(a, b, intersections);
+      for (const auto& i : intersections) {
+          int64_t tail_length_a = LineSegment(a.a, i).length();
+          int64_t tail_length_b = LineSegment(b.a, i).length();
+          steps.push_back(head_length_a + tail_length_a + head_length_b + tail_length_b);
+      }
+      intersections.clear();
+      head_length_b += b.length();
     }
+    head_length_a += a.length();
   }
-  std::sort(intersections.begin(), intersections.end(),
-            [](const Vector &a, const Vector &b) {
-              return manhattan_distance(a) < manhattan_distance(b);
-            });
-  if (intersections.size() <= 1) {
+  std::sort(steps.begin(), steps.end());
+  if (steps.size() <= 1) {
     std::cerr << "No intersections found!" << std::endl;
     return 1;
   }
-  std::cout << manhattan_distance(intersections[1]) << std::endl;
+  std::cout << steps[1] << std::endl;
   return 0;
 }
