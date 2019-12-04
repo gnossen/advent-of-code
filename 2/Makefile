@@ -1,10 +1,10 @@
-2.o: 2.c
+.PHONY: all
+all: interpeter
+
+%.o: %.c
 	gcc -c $< -o $@
 
-1202.o: 1202.c
-	gcc -c $< -o $@
-
-2: 2.o 1202.o
+interpeter: interpreter.o 1202.o
 	gcc $^ -o $@
 
 .PHONY: clean
