@@ -164,3 +164,34 @@ process_t instantiate_process(program_t program) {
 void destroy_process(process_t process) { free(process.data); }
 
 void destroy_program(program_t program) { free(program.data); }
+
+buffer_t *make_buffer(size_t size) {
+  uint64_t *data = malloc(sizeof(uint64_t) * size);
+  buffer_t *buffer = malloc(sizeof(buffer_t));
+  buffer->data = data;
+  buffer->read_index = 0;
+  buffer->write_index = 0;
+  buffer->len = size;
+  return buffer;
+}
+
+void destroy_buffer(buffer_t *buffer) {
+  free(buffer->data);
+  free(buffer);
+}
+
+bool buffer_empty(const buffer_t *buffer) {
+  return buffer->read_index == buffer->write_index;
+}
+
+bool buffer_full(const buffer_t *buffer) {
+  return buffer->write_index - buffer->read_index == buffer->len;
+}
+
+uint64_t buffer_read(buffer_t *buffer) {
+  return buffer->data[buffer->read_index++ % buffer->len];
+}
+
+void buffer_write(buffer_t *buffer, uint64_t val) {
+  buffer->data[buffer->write_index++ % buffer->len] = val;
+}
