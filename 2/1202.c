@@ -102,31 +102,31 @@ program_t program_from_text_filepath(const char *path) {
   return program;
 }
 
+static uint64_t add_op(uint64_t a, uint64_t b) { return a + b; }
+
+static uint64_t mult_op(uint64_t a, uint64_t b) { return a * b; }
+
+typedef uint64_t (*binary_op)(uint64_t a, uint64_t b);
+
+static void perform_generic_op(process_t process, uint64_t **ip, binary_op op) {
+  advance(process, (const uint64_t **)ip, 4);
+  if (*(*ip - 1) >= process.len) {
+    fprintf(stderr,
+            "Attempt to modify location %d from instruction at location %d.",
+            *(*ip - 1), *ip - 4);
+    exit(1);
+  }
+  *(process.data + *(*ip - 1)) =
+      op(*(process.data + *(*ip - 3)), *(process.data + *(*ip - 2)));
+}
+
 void execute_program(process_t process) {
   uint64_t *ip = process.data;
   while (ip < program_end(process)) {
     if (*ip == k_add_op) {
-      advance(process, (const uint64_t **)&ip, 4);
-      if (*(ip - 1) >= process.len) {
-        fprintf(
-            stderr,
-            "Attempt to modify location %d from instruction at location %d.",
-            *(ip - 1), ip - 4);
-        exit(1);
-      }
-      *(process.data + *(ip - 1)) =
-          *(process.data + *(ip - 3)) + *(process.data + *(ip - 2));
+      perform_generic_op(process, &ip, add_op);
     } else if (*ip == k_mult_op) {
-      advance(process, (const uint64_t **)&ip, 4);
-      if (*(ip - 1) >= process.len) {
-        fprintf(
-            stderr,
-            "Attempt to modify location %d from instruction at location %d.",
-            *(ip - 1), ip - 4);
-        exit(1);
-      }
-      *(process.data + *(ip - 1)) =
-          *(process.data + *(ip - 3)) * *(process.data + *(ip - 2));
+      perform_generic_op(process, &ip, mult_op);
     } else if (*ip == k_halt_op) {
       return;
     } else {
