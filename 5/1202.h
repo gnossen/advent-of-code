@@ -40,8 +40,6 @@ program_t program_from_text_file(FILE *f);
 // NOTE: It is the caller's responsibility to free the program's memory.
 program_t program_from_text_filepath(const char *path);
 
-void execute_program(process_t process);
-
 // A basic circular array.
 typedef struct buffer_t {
   uint64_t *data;
@@ -69,6 +67,12 @@ uint64_t buffer_read(buffer_t *buffer);
 // NOTE: UB results when buffer_write is called on a full buffer.
 void buffer_write(buffer_t *buffer, uint64_t val);
 
-// program_status_t execute(process_t process, buffer_t input, buffer_t output);
+typedef enum process_status {
+  HALTED,
+  AWAITING_WRITE,
+  AWAITING_READ
+} process_status;
+
+process_status execute(process_t process, buffer_t *input, buffer_t *output);
 
 #endif

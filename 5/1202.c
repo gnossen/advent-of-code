@@ -120,7 +120,8 @@ static void perform_generic_op(process_t process, uint64_t **ip, binary_op op) {
       op(*(process.data + *(*ip - 3)), *(process.data + *(*ip - 2)));
 }
 
-void execute_program(process_t process) {
+// TODO: Actually implement IO.
+process_status execute(process_t process, buffer_t *input, buffer_t *output) {
   uint64_t *ip = process.data;
   while (ip < program_end(process)) {
     if (*ip == k_add_op) {
@@ -128,7 +129,7 @@ void execute_program(process_t process) {
     } else if (*ip == k_mult_op) {
       perform_generic_op(process, &ip, mult_op);
     } else if (*ip == k_halt_op) {
-      return;
+      return HALTED;
     } else {
       fprintf(stderr, "Unrecognized opcode %d at location %d.\n", *ip,
               ip - process.data);
