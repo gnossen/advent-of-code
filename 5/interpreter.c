@@ -3,26 +3,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static const size_t k_io_size = 1 << 10;
-
 void drain_output(buffer_t *output) {
   while (!buffer_empty(output)) {
     printf("%d\n", buffer_read(output));
   }
 }
 
-void run_program_loop(process_t *process, buffer_t *input, buffer_t *output) {
+void run_program_loop(process_t *process) {
   process_status status;
-  while ((status = execute(process, input, output)) != HALTED) {
+  while ((status = execute(process)) != HALTED) {
     if (status == AWAITING_READ) {
       uint64_t input_val;
       scanf("%d\n", &input_val);
-      buffer_write(input, input_val);
+      buffer_write(process->input, input_val);
     } else if (status == AWAITING_WRITE) {
-      drain_output(output);
+      drain_output(process->output);
     }
   }
-  drain_output(output);
+  drain_output(process->output);
 }
 
 int main(int argc, char **argv) {
@@ -32,11 +30,7 @@ int main(int argc, char **argv) {
   }
   program_t program = program_from_text_filepath(argv[1]);
   process_t *process = instantiate_process(program);
-  buffer_t *input = make_buffer(k_io_size);
-  buffer_t *output = make_buffer(k_io_size);
-  run_program_loop(process, input, output);
-  destroy_buffer(input);
-  destroy_buffer(output);
+  run_program_loop(process);
   destroy_program(program);
   destroy_process(process);
   return 0;

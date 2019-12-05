@@ -9,6 +9,7 @@ static const uint64_t k_output_op = 4;
 static const uint64_t k_halt_op = 99;
 
 static const size_t k_max_program_size = 1 << 14;
+static const size_t k_io_size = 1 << 10;
 
 // Can be used on both programs *and* processes.
 static void advance(uint64_t *data, size_t len, uint64_t **ip, size_t steps) {
@@ -126,24 +127,24 @@ static void perform_binary_op(process_t *process, uint64_t **ip, binary_op op) {
       op(*(process->data + *(*ip - 3)), *(process->data + *(*ip - 2)));
 }
 
-process_status execute(process_t *process, buffer_t *input, buffer_t *output) {
+process_status execute(process_t *process) {
   while (process->ip < process->data + process->len) {
     if (*(process->ip) == k_add_op) {
       perform_binary_op(process, &(process->ip), add_op);
     } else if (*(process->ip) == k_mult_op) {
       perform_binary_op(process, &(process->ip), mult_op);
     } else if (*(process->ip) == k_input_op) {
-      if (buffer_empty(input)) {
+      if (buffer_empty(process->input)) {
         return AWAITING_READ;
       }
       advance(process->data, process->len, &(process->ip), 2);
-      *(process->data + *(process->ip - 1)) = buffer_read(input);
+      *(process->data + *(process->ip - 1)) = buffer_read(process->input);
     } else if (*(process->ip) == k_output_op) {
-      if (buffer_full(output)) {
+      if (buffer_full(process->output)) {
         return AWAITING_WRITE;
       }
       advance(process->data, process->len, &(process->ip), 2);
-      buffer_write(output, *(process->data + *(process->ip - 1)));
+      buffer_write(process->output, *(process->data + *(process->ip - 1)));
     } else if (*(process->ip) == k_halt_op) {
       return HALTED;
     } else {
@@ -169,12 +170,16 @@ process_t *instantiate_process_from_buffer(program_t program, uint64_t *buffer,
   process->len = program.len;
   process->buffer_len = buffer_len;
   process->ip = buffer;
+  process->input = make_buffer(k_io_size);
+  process->output = make_buffer(k_io_size);
   return process;
 }
 
 void reset_process(const program_t program, process_t *process) {
   memcpy(process->data, program.data, sizeof(uint64_t) * program.len);
   process->ip = process->data;
+  buffer_clear(process->input);
+  buffer_clear(process->output);
 }
 
 // NOTE: It is the caller's responsibility to free the memory in this process.
@@ -185,6 +190,8 @@ process_t *instantiate_process(program_t program) {
 
 void destroy_process(process_t *process) {
   free(process->data);
+  destroy_buffer(process->input);
+  destroy_buffer(process->output);
   free(process);
 }
 
@@ -211,6 +218,11 @@ bool buffer_empty(const buffer_t *buffer) {
 
 bool buffer_full(const buffer_t *buffer) {
   return buffer->write_index - buffer->read_index == buffer->len;
+}
+
+void buffer_clear(buffer_t *buffer) {
+  buffer->read_index = 0;
+  buffer->write_index = 0;
 }
 
 uint64_t buffer_read(buffer_t *buffer) {
