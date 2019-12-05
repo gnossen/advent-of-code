@@ -5,10 +5,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static const uint64_t k_add_op = 1;
-static const uint64_t k_mult_op = 2;
-static const uint64_t k_halt_op = 99;
-
 static const size_t k_buffer_size = 1024;
 
 #define MIN(a, b) ((a > b) ? b : a)

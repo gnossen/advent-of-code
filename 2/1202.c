@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+static const uint64_t k_add_op = 1;
+static const uint64_t k_mult_op = 2;
+static const uint64_t k_halt_op = 99;
+
 static void advance(const uint64_t *start, const uint64_t **ip, size_t steps,
                     size_t prog_len) {
   if ((*ip - start) + steps > prog_len + 1) {

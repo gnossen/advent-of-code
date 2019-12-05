@@ -33,8 +33,10 @@ int main(int argc, char **argv) {
           calculate(i, j, program, program_len, buffer, k_buffer_size);
       if (output == desired) {
         printf("%d\n", 100 * i + j);
+        return 0;
       }
     }
   }
-  return 0;
+  fprintf(stderr, "Failed to find input resulting in %d.\n", desired);
+  return 1;
 }
