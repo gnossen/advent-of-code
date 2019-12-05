@@ -16,19 +16,27 @@ typedef struct program_t {
   size_t buffer_len;
 } program_t;
 
-typedef program_t process_t;
+// typedef program_t process_t;
+
+typedef struct process_t {
+  uint64_t *data;
+  size_t len;
+  size_t buffer_len;
+  uint64_t *ip;
+  // TODO: Should the IO buffers just live in here too?
+} process_t;
 
 uint64_t *program_end(program_t program);
 
-process_t instantiate_process_from_buffer(program_t program, uint64_t *buffer,
-                                          size_t buffer_len);
+process_t *instantiate_process_from_buffer(program_t program, uint64_t *buffer,
+                                           size_t buffer_len);
 
 // NOTE: It is the caller's responsibility to free the memory in this process.
-process_t instantiate_process(program_t program);
+process_t *instantiate_process(program_t program);
 
-void reset_process(const program_t program, process_t process);
+void reset_process(const program_t program, process_t *process);
 
-void destroy_process(process_t process);
+void destroy_process(process_t *process);
 
 void destroy_program(program_t program);
 
@@ -73,6 +81,6 @@ typedef enum process_status {
   AWAITING_READ
 } process_status;
 
-process_status execute(process_t process, buffer_t *input, buffer_t *output);
+process_status execute(process_t *process, buffer_t *input, buffer_t *output);
 
 #endif
