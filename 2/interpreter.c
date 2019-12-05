@@ -11,11 +11,12 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Unable to open %s.\n", argv[1]);
     exit(1);
   }
-  uint64_t program[k_buffer_size];
-  size_t program_len;
-  parse_program(f, k_buffer_size, program, &program_len);
+  program_t program = program_from_text_file(f);
   fclose(f);
-  execute_program(program, program_len);
-  pretty_print_program(stdout, program, program_len);
+  process_t process = instantiate_process(program);
+  execute_program(process);
+  pretty_print_program(stdout, process);
+  destroy_program(program);
+  destroy_process(process);
   return 0;
 }
