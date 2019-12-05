@@ -16,13 +16,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
   int64_t desired = atoi(argv[2]);
-  FILE *f = fopen(argv[1], "r");
-  if (f == NULL) {
-    fprintf(stderr, "Unable to open %s.\n", argv[1]);
-    exit(1);
-  }
-  program_t program = program_from_text_file(f);
-  fclose(f);
+  program_t program = program_from_text_filepath(argv[1]);
   process_t process = instantiate_process(program);
   for (size_t i = 0; i < k_max_input; ++i) {
     for (size_t j = 0; j < k_max_input; ++j) {

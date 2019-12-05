@@ -91,6 +91,17 @@ program_t program_from_text_file(FILE *f) {
   return program;
 }
 
+program_t program_from_text_filepath(const char *path) {
+  FILE *f = fopen(path, "r");
+  if (f == NULL) {
+    fprintf(stderr, "Unable to open %s.\n", path);
+    exit(1);
+  }
+  program_t program = program_from_text_file(f);
+  fclose(f);
+  return program;
+}
+
 void execute_program(process_t process) {
   uint64_t *ip = process.data;
   while (ip < program_end(process)) {

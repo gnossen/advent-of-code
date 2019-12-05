@@ -35,7 +35,9 @@ void pretty_print_program(FILE *f, program_t program);
 // NOTE: It is the caller's responsibility to free the program's memory.
 program_t program_from_text_file(FILE *f);
 
-// NOTE: Mutates program in-place. Copy beforehand if needed.
+// NOTE: It is the caller's responsibility to free the program's memory.
+program_t program_from_text_filepath(const char *path);
+
 void execute_program(process_t process);
 
 #endif
