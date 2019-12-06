@@ -10,3 +10,6 @@ echo "Test buffer data structure"
 
 echo "Test Interpreter"
 ./test_interpreter.sh
+
+echo "Test Bytecode"
+./bytecode_test

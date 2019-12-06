@@ -237,3 +237,26 @@ int64_t buffer_read(buffer_t *buffer) {
 void buffer_write(buffer_t *buffer, int64_t val) {
   buffer->data[buffer->write_index++ % buffer->len] = val;
 }
+
+int64_t argument_mode(uint64_t instruction, size_t argument) {
+    return (instruction << (64 - (ARG_MODE_BITS * (argument + 1) + OPCODE_BITS))) >> (64 - ARG_MODE_BITS);
+}
+
+int64_t opcode(uint64_t instruction) {
+    return instruction & OPCODE_MASK;
+}
+
+int64_t decimal_to_bytecode(const char* decimal) {
+  int64_t instruction;
+  size_t p = strlen(decimal) - 1;
+  instruction = decimal[p] - '0';
+  if (--p == -1) return instruction;
+  instruction += (decimal[p] - '0') * 10;
+  if (--p == -1) return instruction;
+  instruction |= ((decimal[p] - '0') << OPCODE_BITS);
+  if (--p == -1) return instruction;
+  instruction |= ((decimal[p] - '0') << (OPCODE_BITS + ARG_MODE_BITS));
+  if (--p == -1) return instruction;
+  instruction |= ((decimal[p] - '0') << (OPCODE_BITS + 2 * ARG_MODE_BITS));
+  return instruction;
+}

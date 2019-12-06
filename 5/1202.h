@@ -85,4 +85,30 @@ typedef enum process_status {
 
 process_status execute(process_t *process);
 
+static const size_t OPCODE_BITS = 7;
+static const size_t ARG_MODE_BITS = 4;
+static const int64_t OPCODE_MASK = (1 << (OPCODE_BITS + 1)) - 1;
+static const int64_t POSITION_MODE = 0;
+static const int64_t IMMEDIATE_MODE = 1;
+
+/* Instructions are translated from a textual decimal representation to a
+ * binary representation.
+ *
+ * The least significant 7 bits are reserved for the opcode. This makes 128
+ * possibilities, which accommodates the highest possible decimal value of 99.
+ * 
+ * After that, each group of four bits represents the mode of each argument.
+ * For example, 1002 would be converted as follows:
+ *
+ *   000000000000000000000000000000000000000000000 | 0000 | 0001 | 0000 | 0000010
+ *   UNUSED                                        | ARG3 | ARG2 | ARG1 | OPCODE
+ */
+
+// NOTE: Argument index is zero based.
+int64_t argument_mode(uint64_t instruction, size_t argument);
+
+int64_t opcode(uint64_t instruction);
+
+int64_t decimal_to_bytecode(const char* decimal);
+
 #endif
