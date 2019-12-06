@@ -238,25 +238,53 @@ void buffer_write(buffer_t *buffer, int64_t val) {
   buffer->data[buffer->write_index++ % buffer->len] = val;
 }
 
+// TODO: Define in terms of BIT_RANGE;
 int64_t argument_mode(uint64_t instruction, size_t argument) {
-    return (instruction << (64 - (ARG_MODE_BITS * (argument + 1) + OPCODE_BITS))) >> (64 - ARG_MODE_BITS);
+  return (instruction << (64 -
+                          (ARG_MODE_BITS * (argument + 1) + OPCODE_BITS))) >>
+         (64 - ARG_MODE_BITS);
 }
 
-int64_t opcode(uint64_t instruction) {
-    return instruction & OPCODE_MASK;
-}
+int64_t opcode(uint64_t instruction) { return instruction & OPCODE_MASK; }
 
-int64_t decimal_to_bytecode(const char* decimal) {
+int64_t decimal_to_bytecode(const char *decimal) {
   int64_t instruction;
   size_t p = strlen(decimal) - 1;
   instruction = decimal[p] - '0';
-  if (--p == -1) return instruction;
+  if (--p == -1)
+    return instruction;
   instruction += (decimal[p] - '0') * 10;
-  if (--p == -1) return instruction;
+  if (--p == -1)
+    return instruction;
   instruction |= ((decimal[p] - '0') << OPCODE_BITS);
-  if (--p == -1) return instruction;
+  if (--p == -1)
+    return instruction;
   instruction |= ((decimal[p] - '0') << (OPCODE_BITS + ARG_MODE_BITS));
-  if (--p == -1) return instruction;
+  if (--p == -1)
+    return instruction;
   instruction |= ((decimal[p] - '0') << (OPCODE_BITS + 2 * ARG_MODE_BITS));
   return instruction;
+}
+
+void bytecode_to_decimal(int64_t instruction, char *decimal,
+                         size_t buffer_len) {
+  decimal[0] = '\0';
+  size_t digits = 0;
+  int64_t mode;
+  size_t start = OPCODE_BITS + 2 * ARG_MODE_BITS;
+  for (int i = 2; i >= 0; i--) {
+    mode = argument_mode(instruction, i);
+    if (digits != 0 || mode != 0) {
+      decimal[digits++] = '0' + mode;
+    }
+    start -= ARG_MODE_BITS;
+  }
+  int64_t opc = opcode(instruction);
+  int64_t ones = opc % 10;
+  int64_t tens = (opc - ones) / 10;
+  if (digits != 0 || tens != 0) {
+    decimal[digits++] = '0' + tens;
+  }
+  decimal[digits++] = '0' + ones;
+  decimal[digits++] = '\0';
 }
