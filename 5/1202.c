@@ -2,17 +2,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const uint64_t k_add_op = 1;
-static const uint64_t k_mult_op = 2;
-static const uint64_t k_input_op = 3;
-static const uint64_t k_output_op = 4;
-static const uint64_t k_halt_op = 99;
+static const int64_t k_add_op = 1;
+static const int64_t k_mult_op = 2;
+static const int64_t k_input_op = 3;
+static const int64_t k_output_op = 4;
+static const int64_t k_halt_op = 99;
 
 static const size_t k_max_program_size = 1 << 14;
 static const size_t k_io_size = 1 << 10;
 
 // Can be used on both programs *and* processes.
-static void advance(uint64_t *data, size_t len, uint64_t **ip, size_t steps) {
+static void advance(int64_t *data, size_t len, int64_t **ip, size_t steps) {
   if ((*ip - data) + steps > len + 1) {
     fprintf(stderr,
             "Malformed program. Attempt to advance to position %d when buffer "
@@ -25,10 +25,10 @@ static void advance(uint64_t *data, size_t len, uint64_t **ip, size_t steps) {
 
 static int is_numerical(char c) { return c >= '0' && c <= '9'; }
 
-uint64_t *program_end(program_t program) { return program.data + program.len; }
+int64_t *program_end(program_t program) { return program.data + program.len; }
 
 void pretty_print_program(FILE *f, program_t program) {
-  uint64_t *ip = program.data;
+  int64_t *ip = program.data;
   do {
     if (*ip == k_halt_op) {
       advance(program.data, program.len, &ip, 1);
@@ -55,8 +55,8 @@ void pretty_print_program(FILE *f, program_t program) {
 }
 
 program_t program_from_text_file(FILE *f) {
-  uint64_t *data = malloc(sizeof(uint64_t) * k_max_program_size);
-  uint64_t *rp = data;
+  int64_t *data = malloc(sizeof(int64_t) * k_max_program_size);
+  int64_t *rp = data;
   char buffer[k_buffer_size];
   char *bp = buffer;
   int cur = '0';
@@ -92,7 +92,7 @@ program_t program_from_text_file(FILE *f) {
   }
   // NOTE: Shrink down to the smallest possible size for maximum performance.
   size_t program_len = rp - data;
-  data = realloc(data, sizeof(uint64_t) * program_len);
+  data = realloc(data, sizeof(int64_t) * program_len);
   program_t program = {
       .data = data, .len = program_len, .buffer_len = program_len};
   return program;
@@ -109,15 +109,15 @@ program_t program_from_text_filepath(const char *path) {
   return program;
 }
 
-static uint64_t add_op(process_t *process, uint64_t a, uint64_t b) {
+static int64_t add_op(process_t *process, int64_t a, int64_t b) {
   return a + b;
 }
 
-static uint64_t mult_op(process_t *process, uint64_t a, uint64_t b) {
+static int64_t mult_op(process_t *process, int64_t a, int64_t b) {
   return a * b;
 }
 
-typedef uint64_t (*binary_op)(process_t *process, uint64_t a, uint64_t b);
+typedef int64_t (*binary_op)(process_t *process, int64_t a, int64_t b);
 
 static void perform_binary_op(process_t *process, binary_op op) {
   advance(process->data, process->len, &(process->ip), 4);
@@ -161,7 +161,7 @@ process_status execute(process_t *process) {
   return HALTED;
 }
 
-process_t *instantiate_process_from_buffer(program_t program, uint64_t *buffer,
+process_t *instantiate_process_from_buffer(program_t program, int64_t *buffer,
                                            size_t buffer_len) {
   if (buffer_len < program.len) {
     fprintf(stderr,
@@ -169,7 +169,7 @@ process_t *instantiate_process_from_buffer(program_t program, uint64_t *buffer,
             program.len, buffer_len);
     exit(1);
   }
-  memcpy(buffer, program.data, sizeof(uint64_t) * program.len);
+  memcpy(buffer, program.data, sizeof(int64_t) * program.len);
   process_t *process = malloc(sizeof(process_t));
   process->data = buffer;
   process->len = program.len;
@@ -181,7 +181,7 @@ process_t *instantiate_process_from_buffer(program_t program, uint64_t *buffer,
 }
 
 void reset_process(const program_t program, process_t *process) {
-  memcpy(process->data, program.data, sizeof(uint64_t) * program.len);
+  memcpy(process->data, program.data, sizeof(int64_t) * program.len);
   process->ip = process->data;
   buffer_clear(process->input);
   buffer_clear(process->output);
@@ -189,7 +189,7 @@ void reset_process(const program_t program, process_t *process) {
 
 // NOTE: It is the caller's responsibility to free the memory in this process.
 process_t *instantiate_process(program_t program) {
-  uint64_t *buffer = malloc(sizeof(uint64_t) * program.len);
+  int64_t *buffer = malloc(sizeof(int64_t) * program.len);
   return instantiate_process_from_buffer(program, buffer, program.len);
 }
 
@@ -203,7 +203,7 @@ void destroy_process(process_t *process) {
 void destroy_program(program_t program) { free(program.data); }
 
 buffer_t *make_buffer(size_t size) {
-  uint64_t *data = malloc(sizeof(uint64_t) * size);
+  int64_t *data = malloc(sizeof(int64_t) * size);
   buffer_t *buffer = malloc(sizeof(buffer_t));
   buffer->data = data;
   buffer->read_index = 0;
@@ -230,10 +230,10 @@ void buffer_clear(buffer_t *buffer) {
   buffer->write_index = 0;
 }
 
-uint64_t buffer_read(buffer_t *buffer) {
+int64_t buffer_read(buffer_t *buffer) {
   return buffer->data[buffer->read_index++ % buffer->len];
 }
 
-void buffer_write(buffer_t *buffer, uint64_t val) {
+void buffer_write(buffer_t *buffer, int64_t val) {
   buffer->data[buffer->write_index++ % buffer->len] = val;
 }
