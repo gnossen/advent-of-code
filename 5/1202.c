@@ -238,7 +238,6 @@ void buffer_write(buffer_t *buffer, int64_t val) {
   buffer->data[buffer->write_index++ % buffer->len] = val;
 }
 
-// TODO: Define in terms of BIT_RANGE;
 int64_t argument_mode(uint64_t instruction, size_t argument) {
   return (instruction << (64 -
                           (ARG_MODE_BITS * (argument + 1) + OPCODE_BITS))) >>

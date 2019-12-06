@@ -96,23 +96,24 @@ static const int64_t IMMEDIATE_MODE = 1;
  *
  * The least significant 7 bits are reserved for the opcode. This makes 128
  * possibilities, which accommodates the highest possible decimal value of 99.
- *
+ * 
  * After that, each group of four bits represents the mode of each argument.
  * For example, 1002 would be converted as follows:
  *
- *   000000000000000000000000000000000000000000000 | 0000 | 0001 | 0000 |
- * 0000010 UNUSED                                        | ARG3 | ARG2 | ARG1 |
- * OPCODE
+ * 000000000000000000000000000000000000000000000 | 0000 | 0001 | 0000 | 0000010
+ * UNUSED                                        | ARG3 | ARG2 | ARG1 | OPCODE
  */
+
+
 
 // NOTE: Argument index is zero based.
 int64_t argument_mode(uint64_t instruction, size_t argument);
 
 int64_t opcode(uint64_t instruction);
 
-int64_t decimal_to_bytecode(const char *decimal);
+int64_t decimal_to_bytecode(const char* decimal);
 
 // NOTE: buffer_len must be at least 7.
-void bytecode_to_decimal(int64_t instruction, char *decimal, size_t buffer_len);
+void bytecode_to_decimal(int64_t instruction, char* decimal, size_t buffer_len);
 
 #endif
