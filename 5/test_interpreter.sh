@@ -23,3 +23,4 @@ function test_interpreter () {
 test_interpreter 7.1202 '1\n2\n3\n' 7.output
 test_interpreter 6.1202 '' 6.output
 test_interpreter 8.1202 '' 8.output
+test_interpreter 10.1202 '' 10.output
