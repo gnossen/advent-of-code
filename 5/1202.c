@@ -119,7 +119,18 @@ static int64_t mult_op(process_t *process, int64_t a, int64_t b) {
 
 typedef int64_t (*binary_op)(process_t *process, int64_t a, int64_t b);
 
-static void perform_binary_op(process_t *process, binary_op op) {
+static int64_t get_arg_value(process_t *process, int64_t mode, uint64_t arg) {
+  int64_t value;
+  if (mode == POSITION_MODE) {
+    return *(process->data + arg);
+  } else {
+    // IMMEDIATE_MODE
+    return arg;
+  }
+}
+
+static void perform_binary_op(process_t *process, int64_t instruction,
+                              binary_op op) {
   advance(process->data, process->len, &(process->ip), 4);
   if (*(process->ip - 1) >= process->len) {
     fprintf(stderr,
@@ -127,18 +138,20 @@ static void perform_binary_op(process_t *process, binary_op op) {
             *(process->ip - 1), process->ip - 4);
     exit(1);
   }
-  *(process->data + *(process->ip - 1)) =
-      op(process, *(process->data + *(process->ip - 3)),
-         *(process->data + *(process->ip - 2)));
+  int64_t arg1 =
+      get_arg_value(process, argument_mode(instruction, 0), *(process->ip - 3));
+  int64_t arg2 =
+      get_arg_value(process, argument_mode(instruction, 1), *(process->ip - 2));
+  // NOTE: We ignore the arg mode bit on the third argument.
+  *(process->data + *(process->ip - 1)) = op(process, arg1, arg2);
 }
 
-// TODO: Actually handle different argument modes.
 process_status execute(process_t *process) {
   while (process->ip < process->data + process->len) {
     if (opcode(*(process->ip)) == k_add_op) {
-      perform_binary_op(process, add_op);
+      perform_binary_op(process, *(process->ip), add_op);
     } else if (opcode(*(process->ip)) == k_mult_op) {
-      perform_binary_op(process, mult_op);
+      perform_binary_op(process, *(process->ip), mult_op);
     } else if (opcode(*(process->ip)) == k_input_op) {
       if (buffer_empty(process->input)) {
         return AWAITING_READ;
@@ -150,7 +163,9 @@ process_status execute(process_t *process) {
         return AWAITING_WRITE;
       }
       advance(process->data, process->len, &(process->ip), 2);
-      buffer_write(process->output, *(process->data + *(process->ip - 1)));
+      int64_t arg = get_arg_value(process, argument_mode(*(process->ip - 2), 0),
+                                  *(process->ip - 1));
+      buffer_write(process->output, arg);
     } else if (opcode(*(process->ip)) == k_halt_op) {
       return HALTED;
     } else {

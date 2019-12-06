@@ -23,3 +23,4 @@ test_file_pair 4.1202 4.pretty.1202
 test_file_pair 5.1202 5.pretty.1202
 test_file_pair 6.1202 6.pretty.1202
 test_file_pair 7.1202 7.pretty.1202
+test_file_pair 8.1202 8.pretty.1202

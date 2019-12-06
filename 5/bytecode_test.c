@@ -14,6 +14,15 @@ void test_decimal_to_bytecode() {
   assert(argument_mode(instruction, 2) == 0);
 }
 
+void test_decimal_to_bytecode_2() {
+  uint64_t instruction = decimal_to_bytecode("1101");
+  assert(instruction == 0x881);
+  assert(opcode(instruction) == 1);
+  assert(argument_mode(instruction, 0) == 1);
+  assert(argument_mode(instruction, 1) == 1);
+  assert(argument_mode(instruction, 2) == 0);
+}
+
 void test_bytecode_to_decimal() {
   char buffer[BUF_LEN];
   bytecode_to_decimal(0x802, buffer, BUF_LEN);
@@ -22,6 +31,7 @@ void test_bytecode_to_decimal() {
 
 int main(int argc, char **argv) {
   test_decimal_to_bytecode();
+  test_decimal_to_bytecode_2();
   test_bytecode_to_decimal();
   printf("SUCCESS\n");
   return 0;

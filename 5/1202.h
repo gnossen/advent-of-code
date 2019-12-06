@@ -87,7 +87,7 @@ process_status execute(process_t *process);
 
 static const size_t OPCODE_BITS = 7;
 static const size_t ARG_MODE_BITS = 4;
-static const int64_t OPCODE_MASK = (1 << (OPCODE_BITS + 1)) - 1;
+static const int64_t OPCODE_MASK = (1 << OPCODE_BITS) - 1;
 static const int64_t POSITION_MODE = 0;
 static const int64_t IMMEDIATE_MODE = 1;
 

@@ -1,4 +1,5 @@
 interpreter
 buffer_test
 pretty_print
+bytecode_test
 *.o
