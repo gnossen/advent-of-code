@@ -30,16 +30,16 @@ int64_t *program_end(program_t program) { return program.data + program.len; }
 void pretty_print_program(FILE *f, program_t program) {
   int64_t *ip = program.data;
   do {
-    if (*ip == k_halt_op) {
+    if (opcode(*ip) == k_halt_op) {
       advance(program.data, program.len, &ip, 1);
-      fprintf(f, "%d\n", *(ip - 1));
-    } else if (*ip == k_input_op || *ip == k_output_op) {
+      fprintf(f, "%d\n", binary_to_bcd(*(ip - 1)));
+    } else if (opcode(*ip) == k_input_op || opcode(*ip) == k_output_op) {
       advance(program.data, program.len, &ip, 2);
-      fprintf(f, "%d, %d\n", *(ip - 2), *(ip - 1));
-    } else if (*ip == k_add_op || *ip == k_mult_op) {
+      fprintf(f, "%d, %d\n", binary_to_bcd(*(ip - 2)), *(ip - 1));
+    } else if (opcode(*ip) == k_add_op || opcode(*ip) == k_mult_op) {
       advance(program.data, program.len, &ip, 4);
-      fprintf(f, "%d, %d, %d, %d\n", *(ip - 4), *(ip - 3), *(ip - 2),
-              *(ip - 1));
+      fprintf(f, "%d, %d, %d, %d\n", binary_to_bcd(*(ip - 4)), *(ip - 3),
+              *(ip - 2), *(ip - 1));
     } else {
       size_t upper = MIN(4, program.len - (ip - program.data));
       for (size_t i = 0; i < upper; ++i) {
@@ -70,7 +70,7 @@ program_t program_from_text_file(FILE *f) {
       } else {
         // Okay to drop this character.
         *bp = '\0';
-        *(rp++) = atoi(buffer);
+        *(rp++) = decimal_to_bytecode(buffer);
         bp = buffer;
         break;
       }
@@ -132,29 +132,30 @@ static void perform_binary_op(process_t *process, binary_op op) {
          *(process->data + *(process->ip - 2)));
 }
 
+// TODO: Actually handle different argument modes.
 process_status execute(process_t *process) {
   while (process->ip < process->data + process->len) {
-    if (*(process->ip) == k_add_op) {
+    if (opcode(*(process->ip)) == k_add_op) {
       perform_binary_op(process, add_op);
-    } else if (*(process->ip) == k_mult_op) {
+    } else if (opcode(*(process->ip)) == k_mult_op) {
       perform_binary_op(process, mult_op);
-    } else if (*(process->ip) == k_input_op) {
+    } else if (opcode(*(process->ip)) == k_input_op) {
       if (buffer_empty(process->input)) {
         return AWAITING_READ;
       }
       advance(process->data, process->len, &(process->ip), 2);
       *(process->data + *(process->ip - 1)) = buffer_read(process->input);
-    } else if (*(process->ip) == k_output_op) {
+    } else if (opcode(*(process->ip)) == k_output_op) {
       if (buffer_full(process->output)) {
         return AWAITING_WRITE;
       }
       advance(process->data, process->len, &(process->ip), 2);
       buffer_write(process->output, *(process->data + *(process->ip - 1)));
-    } else if (*(process->ip) == k_halt_op) {
+    } else if (opcode(*(process->ip)) == k_halt_op) {
       return HALTED;
     } else {
       fprintf(stderr, "Unrecognized opcode %d at location %d.\n",
-              *(process->ip), process->ip - process->data);
+              binary_to_bcd(*(process->ip)), process->ip - process->data);
       exit(1);
     }
   }
@@ -286,4 +287,14 @@ void bytecode_to_decimal(int64_t instruction, char *decimal,
   }
   decimal[digits++] = '0' + ones;
   decimal[digits++] = '\0';
+}
+
+int64_t binary_to_bcd(int64_t instruction) {
+  int64_t value = opcode(instruction);
+  int64_t radix = 100;
+  for (size_t i = 0; i < 3; ++i) {
+    value += (argument_mode(instruction, i) * radix);
+    radix *= 10;
+  }
+  return value;
 }
