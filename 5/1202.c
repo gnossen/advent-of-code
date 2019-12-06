@@ -109,30 +109,35 @@ program_t program_from_text_filepath(const char *path) {
   return program;
 }
 
-static uint64_t add_op(uint64_t a, uint64_t b) { return a + b; }
+static uint64_t add_op(process_t *process, uint64_t a, uint64_t b) {
+  return a + b;
+}
 
-static uint64_t mult_op(uint64_t a, uint64_t b) { return a * b; }
+static uint64_t mult_op(process_t *process, uint64_t a, uint64_t b) {
+  return a * b;
+}
 
-typedef uint64_t (*binary_op)(uint64_t a, uint64_t b);
+typedef uint64_t (*binary_op)(process_t *process, uint64_t a, uint64_t b);
 
-static void perform_binary_op(process_t *process, uint64_t **ip, binary_op op) {
-  advance(process->data, process->len, ip, 4);
-  if (*(*ip - 1) >= process->len) {
+static void perform_binary_op(process_t *process, binary_op op) {
+  advance(process->data, process->len, &(process->ip), 4);
+  if (*(process->ip - 1) >= process->len) {
     fprintf(stderr,
             "Attempt to modify location %d from instruction at location %d.",
-            *(*ip - 1), *ip - 4);
+            *(process->ip - 1), process->ip - 4);
     exit(1);
   }
-  *(process->data + *(*ip - 1)) =
-      op(*(process->data + *(*ip - 3)), *(process->data + *(*ip - 2)));
+  *(process->data + *(process->ip - 1)) =
+      op(process, *(process->data + *(process->ip - 3)),
+         *(process->data + *(process->ip - 2)));
 }
 
 process_status execute(process_t *process) {
   while (process->ip < process->data + process->len) {
     if (*(process->ip) == k_add_op) {
-      perform_binary_op(process, &(process->ip), add_op);
+      perform_binary_op(process, add_op);
     } else if (*(process->ip) == k_mult_op) {
-      perform_binary_op(process, &(process->ip), mult_op);
+      perform_binary_op(process, mult_op);
     } else if (*(process->ip) == k_input_op) {
       if (buffer_empty(process->input)) {
         return AWAITING_READ;

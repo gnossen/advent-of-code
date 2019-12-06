@@ -3,19 +3,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static char input_buffer[30];
+
 void drain_output(buffer_t *output) {
   while (!buffer_empty(output)) {
     printf("%d\n", buffer_read(output));
   }
 }
 
+uint64_t get_one_input() {
+  uint64_t input_val;
+  fgets(input_buffer, sizeof(input_buffer), stdin);
+  return atoi(input_buffer);
+}
+
 void run_program_loop(process_t *process) {
   process_status status;
   while ((status = execute(process)) != HALTED) {
     if (status == AWAITING_READ) {
-      uint64_t input_val;
-      scanf("%d\n", &input_val);
-      buffer_write(process->input, input_val);
+      drain_output(process->output);
+      buffer_write(process->input, get_one_input());
     } else if (status == AWAITING_WRITE) {
       drain_output(process->output);
     }
