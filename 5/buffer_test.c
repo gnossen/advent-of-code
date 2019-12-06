@@ -35,5 +35,6 @@ void test_read() {
 int main(int argc, char **argv) {
   test_write();
   test_read();
+  printf("SUCCESS\n");
   return 0;
 }

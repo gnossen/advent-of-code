@@ -1,3 +1,4 @@
 interpreter
 buffer_test
+pretty_print
 *.o
