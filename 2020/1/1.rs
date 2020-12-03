@@ -17,29 +17,25 @@ fn find_sum(sorted_arr : &[u32], len : usize, sum : u32, count: u32) -> Result<V
     // TODO: Binary search.
     for x in sorted_arr[..len].iter() {
       if x == &sum {
-          return Ok(vec![*x]);
+        return Ok(vec![*x]);
       }
     }
-    let e = NoSolutionError {};
-    return Err(e);
   } else {
     for (lower_idx, lower) in sorted_arr[..(len-1)].iter().enumerate() {
       // TODO: Binary search to find the first element no larger than the sum.
       if lower >= &sum { continue; }
-      let result_or = find_sum(&sorted_arr[lower_idx + 1..len],
+      if let Ok(result) = find_sum(&sorted_arr[lower_idx + 1..len],
                                len - lower_idx - 1,
                                sum - lower,
-                               count - 1);
-      if result_or.is_ok() {
-        let result = result_or.unwrap();
+                               count - 1) {
         let mut new_result = vec![*lower];
         new_result.extend(result.iter().cloned());
         return Ok(new_result);
       }
     }
-    let e = NoSolutionError {};
-    return Err(e);
   }
+  let e = NoSolutionError {};
+  return Err(e);
 }
 
 fn main() {
