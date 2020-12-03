@@ -1,8 +1,8 @@
 use std::fs::File;
 use std::io::{self, BufRead};
-// use std::path::Path;
 use std::process::abort;
 use std::fmt;
+use std::env;
 
 #[derive(Debug)]
 pub struct NoSolutionError;
@@ -27,8 +27,15 @@ fn find_sum(sorted_arr : &[u32], len : usize, sum : u32) -> Result<(u32, u32), N
 }
 
 fn main() {
-  // TODO: Get this from the command line.
-  let filepath = "in.txt";
+  let args : Vec<String> = env::args().collect();
+  assert!(args.len() == 4, "Usage: {} FILE COUNT TARGET", args[0]);
+
+  let filepath = &args[1];
+  let count = args[2].parse::<u32>().expect("Count must be a number.");
+  let target = args[3].parse::<u32>().expect("Target must be a number.");
+
+  assert!(count == 2);
+
   let mut numbers : Vec<u32> = Vec::new();
   match File::open(filepath) {
     Ok(file) => {
@@ -58,6 +65,6 @@ fn main() {
   }
 
   numbers.sort_by(|a, b| b.cmp(a));
-  let (a, b) = find_sum(&numbers[..], numbers.len(), 2020).expect("No solution found.");
+  let (a, b) = find_sum(&numbers[..], numbers.len(), target).expect("No solution found.");
   println!("{}", a * b);
 }
