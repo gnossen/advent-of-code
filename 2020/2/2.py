@@ -17,8 +17,8 @@ def is_valid(line: str) -> bool:
     rule_str = pieces[0].strip()
     password = pieces[1].strip()
     (low, high), c = get_rule(rule_str)
-    count = sum(1 for p in password if p == c)
-    return low <= count <= high
+    valid = int(password[low - 1] == c) + int(password[high - 1] == c) == 1
+    return valid
 
 if len(sys.argv) != 2:
     sys.stderr.write(f"Usage: {sys.argv[0]} INPUT_FILE")
