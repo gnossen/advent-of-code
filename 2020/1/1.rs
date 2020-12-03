@@ -12,17 +12,34 @@ impl fmt::Display for NoSolutionError {
   }
 }
 
-fn find_sum(sorted_arr : &[u32], len : usize, sum : u32) -> Result<(u32, u32), NoSolutionError> {
-  for (lower_idx, lower) in sorted_arr[..(len-1)].iter().enumerate() {
-    if lower >= &sum { continue; }
-    for higher in sorted_arr[lower_idx + 1..len].iter() {
-      if lower + higher == sum {
-        return Ok((*lower, *higher));
+fn find_sum(sorted_arr : &[u32], len : usize, sum : u32, count: u32) -> Result<Vec<u32>, NoSolutionError> {
+  if count == 1 {
+    // TODO: Binary search.
+    for x in sorted_arr[..len].iter() {
+      if x == &sum {
+          return Ok(vec![*x]);
       }
     }
+    let e = NoSolutionError {};
+    return Err(e);
+  } else {
+    for (lower_idx, lower) in sorted_arr[..(len-1)].iter().enumerate() {
+      // TODO: Binary search to find the first element no larger than the sum.
+      if lower >= &sum { continue; }
+      let result_or = find_sum(&sorted_arr[lower_idx + 1..len],
+                               len - lower_idx - 1,
+                               sum - lower,
+                               count - 1);
+      if result_or.is_ok() {
+        let result = result_or.unwrap();
+        let mut new_result = vec![*lower];
+        new_result.extend(result.iter().cloned());
+        return Ok(new_result);
+      }
+    }
+    let e = NoSolutionError {};
+    return Err(e);
   }
-  let e = NoSolutionError {};
-  return Err(e);
 }
 
 fn main() {
@@ -32,8 +49,6 @@ fn main() {
   let filepath = &args[1];
   let count = args[2].parse::<u32>().expect("Count must be a number.");
   let target = args[3].parse::<u32>().expect("Target must be a number.");
-
-  assert!(count == 2);
 
   let mut numbers : Vec<u32> = Vec::new();
   let file = File::open(filepath).expect("Failed to open file.");
@@ -45,6 +60,6 @@ fn main() {
   }
 
   numbers.sort_by(|a, b| b.cmp(a));
-  let (a, b) = find_sum(&numbers[..], numbers.len(), target).expect("No solution found.");
-  println!("{}", a * b);
+  let result = find_sum(&numbers[..], numbers.len(), target, count).expect("No solution found.");
+  println!("{}", result.iter().product::<u32>());
 }
