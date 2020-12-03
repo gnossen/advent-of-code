@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::process::abort;
 use std::fmt;
 use std::env;
 
@@ -37,31 +36,12 @@ fn main() {
   assert!(count == 2);
 
   let mut numbers : Vec<u32> = Vec::new();
-  match File::open(filepath) {
-    Ok(file) => {
-      for line_or in io::BufReader::new(file).lines() {
-        match line_or {
-          Ok(line) => {
-            let number_or = line.parse::<u32>();
-            match number_or {
-              Ok(number) => numbers.push(number),
-              Err(_) => {
-                println!("Failed to parse \"{}\" as a number", line);
-                abort();
-              }
-            }
-          },
-          Err(_) => {
-            println!("Failed to read line");
-            abort();
-          },
-        }
-      }
-    },
-    Err(_) => {
-      println!("Failed to open file {}", filepath);
-      abort();
-    }
+  let file = File::open(filepath).expect("Failed to open file.");
+  for line_or in io::BufReader::new(file).lines() {
+    let line = line_or.expect("Failed to read line.");
+    let number_or = line.parse::<u32>();
+    assert!(number_or.is_ok(), "Failed to parse \"{}\" as a number", line);
+    numbers.push(number_or.unwrap());
   }
 
   numbers.sort_by(|a, b| b.cmp(a));
