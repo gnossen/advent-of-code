@@ -46,4 +46,10 @@ parser.add_argument("boarding_pass_file", help="The boarding pass file.")
 args = parser.parse_args()
 
 seat_ids = get_seat_ids(args.boarding_pass_file)
-print(max(seat_ids))
+possible_seat_ids = range(127 * 8 + 7)
+
+candidate_seats = set(possible_seat_ids) - set(seat_ids)
+my_seat = [
+    s for s in candidate_seats if (s - 1) in seat_ids and (s + 1) in seat_ids
+][0]
+print(my_seat)
