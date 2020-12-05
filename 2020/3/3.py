@@ -4,6 +4,14 @@ from typing import List
 
 TreeMap = List[List[bool]]
 
+SLOPES = (
+    (1, 1),
+    (3, 1),
+    (5, 1),
+    (7, 1),
+    (1, 2),
+)
+
 
 def get_map_from_path(path: str) -> TreeMap:
     tree_map = []
@@ -29,13 +37,15 @@ def lookup(x: int, y: int, tree_map: TreeMap) -> bool:
     return tree_map[y][x % width]
 
 
-def count_trees(tree_map: TreeMap, right_pace: int) -> int:
+def count_trees(tree_map: TreeMap, right_pace: int, down_pace: int) -> int:
     tree_count = 0
     x = 0
-    for y, _ in enumerate(tree_map):
+    y = 0
+    while y < len(tree_map):
         if lookup(x, y, tree_map):
             tree_count += 1
         x += right_pace
+        y += down_pace
     return tree_count
 
 
@@ -45,4 +55,8 @@ args = parser.parse_args()
 
 tree_map = get_map_from_path(args.map_file)
 
-print(count_trees(tree_map, 3))
+product = 1
+for (right_slope, down_slope) in SLOPES:
+    product *= count_trees(tree_map, right_slope, down_slope)
+
+print(product)
