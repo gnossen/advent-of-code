@@ -92,7 +92,7 @@ def get_answers(path: str) -> List[List[str]]:
 
 
 def count_unique_in_group(group: List[str]) -> int:
-    return len(set.union(*map(set, group)))
+    return len(set.intersection(*map(set, group)))
 
 
 parser = argparse.ArgumentParser(description="Solve day 6.")
