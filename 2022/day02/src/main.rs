@@ -25,6 +25,10 @@ fn victory_points(play_a: u32, play_b: u32) -> u32 {
     u32::try_from(res).unwrap()
 }
 
+fn move_from_result(play_a: u32, result: u32) -> u32 {
+    (play_a + result) % 3
+}
+
 // Returns the score for player b.
 fn score_round(play_a: u32, play_b: u32) -> u32 {
     let victory = victory_points(play_a, play_b);
@@ -46,9 +50,22 @@ fn main() {
     if let Ok(lines) = read_lines(&args[1]) {
         for line in lines {
             if let Ok(round_str) = line {
-                let (player_a, player_b) = round_str.split_once(" ").unwrap();
+                let (player_a, string_result) = round_str.split_once(" ").unwrap();
                 let play_a = (player_a.chars().collect::<Vec<char>>()[0] as u32) - ('A' as u32);
-                let play_b = (player_b.chars().collect::<Vec<char>>()[0] as u32) - ('X' as u32);
+                let untranslated_result = (string_result.chars().collect::<Vec<char>>()[0] as u32) - ('X' as u32);
+                let result: u32;
+                if untranslated_result == 0 {
+                    result = 2;
+                } else if untranslated_result == 1 {
+                    result = 0;
+                } else if untranslated_result == 2 {
+                    result = 1;
+                } else {
+                    result = 0; // Compiler is dumb.
+                    assert!(false)
+                }
+                let play_b = move_from_result(play_a, result);
+
                 // println!("{}", score_round(play_a, play_b))
                 total += score_round(play_a, play_b);
             }
