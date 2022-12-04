@@ -16,31 +16,25 @@ fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>> wher
     Ok(io::BufReader::new(file).lines())
 }
 
+// Returns 0 for draw, 1 for win, 2 for loss.
+fn victory_points(play_a: u32, play_b: u32) -> u32 {
+    let mut res: i32 = (i32::try_from(play_b).unwrap() - i32::try_from(play_a).unwrap()) % 3;
+    if res < 0 {
+        res += 3;
+    }
+    u32::try_from(res).unwrap()
+}
+
 // Returns the score for player b.
 fn score_round(play_a: u32, play_b: u32) -> u32 {
+    let victory = victory_points(play_a, play_b);
     let victory_points: u32;
-    if play_a == play_b {
+    if victory == 0 {
         victory_points = DRAW_POINTS;
+    } else if victory == 1 {
+        victory_points = WIN_POINTS;
     } else {
-        if play_b == ROCK {
-            if play_a == SCISSORS {
-                victory_points = WIN_POINTS;
-            } else /* PAPER */ {
-                victory_points = LOSS_POINTS;
-            }
-        } else if play_b == PAPER {
-            if play_a == ROCK {
-                victory_points = WIN_POINTS;
-            } else /* SCISSORS */ {
-                victory_points = LOSS_POINTS;
-            }
-        } else /* SCISSORS */ {
-            if play_a == PAPER {
-                victory_points = WIN_POINTS;
-            } else /* ROCK */ {
-                victory_points = LOSS_POINTS;
-            }
-        }
+        victory_points = LOSS_POINTS;
     }
     victory_points + play_b + 1
 }
