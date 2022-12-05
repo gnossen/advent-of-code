@@ -34,9 +34,13 @@ impl StackArrangement {
     }
 
     fn move_multiple(& mut self, count: usize, from: usize, to: usize) {
-        println!("Move {} from {} to {}", count, from, to);
+        let mut tmp: Vec<char> = Vec::new();
         for _ in 0..count {
-            self.move_one(from, to);
+            tmp.push(self.stacks[from].pop().unwrap());
+        }
+        tmp.reverse();
+        for i in 0..count {
+            self.stacks[to].push(tmp[i]);
         }
     }
 
