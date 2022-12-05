@@ -18,28 +18,23 @@ fn point_contained(range_lo: u32, range_hi: u32, point: u32) -> bool {
     point >= range_lo && point <= range_hi
 }
 
-fn contains(a_lo: u32, a_hi: u32, b_lo: u32, b_hi: u32) -> bool {
-    let a_size = a_hi - a_lo;
-    let b_size = b_hi - b_lo;
-    if b_size > a_size {
-        contains(b_lo, b_hi, a_lo, a_hi)
-    } else {
-        point_contained(a_lo, a_hi, b_lo) && point_contained(a_lo, a_hi, b_hi)
-    }
+fn overlaps(a_lo: u32, a_hi: u32, b_lo: u32, b_hi: u32) -> bool {
+    (point_contained(a_lo, a_hi, b_lo) || point_contained(a_lo, a_hi, b_hi) ||
+     point_contained(b_lo, b_hi, a_lo) || point_contained(b_lo, b_hi, a_hi))
 }
 
 fn main() {
     let args: Vec<String>  = env::args().collect();
     assert!(args.len() == 2, "Supply one argument: the text file to read.");
-    let mut contained_count = 0;
+    let mut overlaps_count = 0;
     if let Ok(lines) = read_lines(&args[1]) {
         for line in lines {
             if let Ok(pair_line) = line {
                 let (elf1, elf2) = pair_line.split_once(",").unwrap();
                 let (lower1, higher1) = get_range(elf1);
                 let (lower2, higher2) = get_range(elf2);
-                if contains(lower1, higher1, lower2, higher2) {
-                    contained_count += 1;
+                if overlaps(lower1, higher1, lower2, higher2) {
+                    overlaps_count += 1;
                 }
             } else {
                 panic!("Failed to read line.");
@@ -48,5 +43,5 @@ fn main() {
     } else {
         panic!("Failed to open {}", args[1]);
     }
-    println!("{}", contained_count);
+    println!("{}", overlaps_count);
 }
