@@ -31,11 +31,15 @@ class File:
         # Only directories count.
         return 0
 
+    def __str__(self):
+        return f"- {self._name} (file, size={self._size})"
+
 class Directory:
     def __init__(self, name):
         self._name = name
         self._children = {}
         self._parent = None
+        self._size = None
 
     def name(self):
         return self._name
@@ -43,11 +47,13 @@ class Directory:
     def add_child(self, child):
         child.set_parent(self)
         self._children[child.name()] = child
+        self._size = None
 
     def size(self):
         total = 0
         for _, child in self._children.items():
             total += child.size()
+        self._size  = total
         return total
 
     def set_parent(self, parent):
@@ -69,6 +75,51 @@ class Directory:
         if self.size() <= size:
             total += self.size()
         return total
+
+    # Returns None if None is found, otherwise a Directory.
+    def smallest_greater_than(self, size):
+        smallest = None
+        for child in self._children.values():
+            if not isinstance(child, Directory):
+                continue
+            child_res = child.smallest_greater_than(size)
+            if not child_res:
+                continue
+            if child_res.size() < size:
+                continue
+            if not smallest:
+                smallest = child_res
+            elif child_res.size() < smallest.size():
+                smallest = child_res
+        if not smallest and self.size() >= size:
+            smallest = self
+        return smallest
+
+    def __repr__(self):
+        return f"Directory({self._name}, size={self.size()})"
+
+    __str__ = __repr__
+
+    def full_tree(self):
+        out = f"- {self._name} (dir, size={self.size()})\n"
+        child_names = list(self._children.keys())
+        child_names.sort(key=lambda c: self._children[c].size())
+        for c in child_names:
+            child = self._children[c]
+            sub_out = str(child)
+            for line in sub_out.split("\n"):
+                out += ("  " + line + "\n")
+        return out
+
+    def get_directories(self):
+        dirs = []
+        for c in self._children.values():
+            if not isinstance(c, Directory):
+                continue
+            dirs += c.get_directories()
+        dirs += [self]
+        dirs.sort(key=lambda d: d.size())
+        return dirs
 
 def parse_cmd(line: str) -> List[str]:
     parts = line.strip().split(" ")
@@ -124,5 +175,9 @@ with open(sys.argv[1], 'r') as f:
                     current_directory.add_child(new_file)
             else:
                 raise Exception("Unknown command output: {}".format(line))
-    print(root_directory.at_most_size(100000))
+
+    disk_size = 70000000
+    update_size = 30000000
+    required_size = update_size - (disk_size - root_directory.size())
+    print(root_directory.smallest_greater_than(required_size).size())
 
