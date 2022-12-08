@@ -34,6 +34,35 @@ def _is_tree_visible(trees, position):
             _is_tree_visible_from(trees, position, Vec(position.y, 0), Vec(0, 1)) or
             _is_tree_visible_from(trees, position, Vec(position.y, width - 1), Vec(0, -1)))
 
+def _in_bounds(pos, height, width):
+    return (pos.x >= 0 and pos.x < width and pos.y >= 0 and pos.y < height)
+
+def _scenic_score_in_direction(trees, pos, d):
+    height = len(trees)
+    width = len(trees[0])
+    current = pos + d
+    start_height = trees[pos.y][pos.x]
+    score = 0
+    while _in_bounds(current, height, width):
+        score += 1
+        current_height = trees[current.y][current.x]
+        if current_height >= start_height:
+            break
+        current += d
+    return score
+
+def _scenic_score(trees, pos):
+    dirs = [
+        Vec(0, 1),
+        Vec(1, 0),
+        Vec(0, -1),
+        Vec(-1, 0),
+    ]
+    score = 1
+    for d in dirs:
+        score *= _scenic_score_in_direction(trees, pos, d)
+    return score
+
 assert len(sys.argv) == 2
 
 trees = []
@@ -49,11 +78,12 @@ with open(sys.argv[1], "r") as f:
 height = len(trees)
 width = len(trees[0])
 
-externally_visible = 0
+# print(_scenic_score_in_direction(trees, Vec(1, 2), Vec(1, 0)))
+
+max_score = 0
 for y in range(height):
     for x in range(width):
-        if _is_tree_visible(trees, Vec(y, x)):
-            externally_visible += 1
+        max_score = max(max_score, _scenic_score(trees, Vec(y, x)))
 
-print(externally_visible)
+print(max_score)
 
