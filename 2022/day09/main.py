@@ -67,10 +67,12 @@ with open(sys.argv[1], "r") as f:
         components = line.strip().split(" ")
         assert len(components) == 2
         assert components[1].isdigit(), components[1]
-        movement = interpret_delta(components[0], int(components[1]))
-        head += movement
-        while not are_touching(head, tail):
-            tail = update_tail(head, tail)
-            tail_spots.add(tail)
+        magnitude = int(components[1])
+        head_dir = DIR_LOOKUP[components[0]]
+        for _ in range(magnitude):
+            head += head_dir
+            if not are_touching(head, tail):
+                tail = update_tail(head, tail)
+                tail_spots.add(tail)
 
 print(len(tail_spots))
