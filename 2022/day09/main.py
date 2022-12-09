@@ -19,17 +19,20 @@ class Vec:
     def __sub__(self, other):
         return Vec(self.y - other.y, self.x - other.x)
 
-def knot_grid(head, tail):
-    max_y = max(head.y, tail.y)
-    max_x = max(head.x, tail.x)
+def knot_grid(knots):
+    max_y = max(k.y for k in knots)
+    max_x = max(k.x for k in knots)
 
     s = ""
     for y in range(max_y + 1):
         for x in range(max_x + 1):
-            if y == head.y and x == head.x:
-                s += "H"
-            elif y == tail.y and x == tail.x:
-                s += "T"
+            for i, _ in enumerate(knots):
+                if y == knots[i].y and x == knots[i].x:
+                    if i == 0:
+                        s += "H"
+                    else:
+                        s += str(i)
+                    break
             else:
                 s += "."
         s += "\n"
@@ -58,10 +61,11 @@ def update_tail(head, tail):
 
 assert len(sys.argv) == 2
 
-head = Vec(0, 0)
-tail = Vec(0, 0)
+KNOT_COUNT = 10
 
-tail_spots = {tail}
+knots = [Vec(0, 0) for _ in range(KNOT_COUNT)]
+
+tail_spots = {knots[-1]}
 with open(sys.argv[1], "r") as f:
     for line in f:
         components = line.strip().split(" ")
@@ -70,9 +74,11 @@ with open(sys.argv[1], "r") as f:
         magnitude = int(components[1])
         head_dir = DIR_LOOKUP[components[0]]
         for _ in range(magnitude):
-            head += head_dir
-            if not are_touching(head, tail):
-                tail = update_tail(head, tail)
-                tail_spots.add(tail)
+            knots[0] += head_dir
+            for i in range(1, KNOT_COUNT):
+                if not are_touching(knots[i-1], knots[i]):
+                    knots[i] = update_tail(knots[i-1], knots[i])
+            tail_spots.add(knots[-1])
+            # print(knot_grid(knots))
 
 print(len(tail_spots))
