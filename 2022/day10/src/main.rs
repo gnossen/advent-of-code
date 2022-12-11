@@ -14,6 +14,9 @@ struct Instruction {
 const NO_OP_OPCODE: u64 = 0;
 const ADD_X_OPCODE: u64 = 1;
 
+const CRT_WIDTH: usize = 40;
+const CRT_HEIGHT: usize= 6;
+
 struct CPU {
     x: i64,
     ip: u64,
@@ -118,14 +121,20 @@ fn main() {
         panic!("Failed to open {}", args[1]);
     }
 
-    let mut total_signal_strength: i64 = 0;
-    for cycle in 1..(END_CYCLE + 1) {
-        if cycle >= 20 && ((cycle - 20) % 40) == 0 {
-             let signal_strength = (cycle as i64) * cpu.x;
-             total_signal_strength += signal_strength;
+    let mut crt_output = String::from("");
+    for cycle in 0..CRT_WIDTH*CRT_HEIGHT {
+        if cycle % CRT_WIDTH == 0 {
+            crt_output.push('\n');
+        }
+        let crt_position: i64 = (cycle as i64) % 40;
+        let sprite_delta = cpu.x - crt_position;
+        if sprite_delta >= -1 && sprite_delta <= 1 {
+            crt_output.push('#');
+        } else {
+            crt_output.push('.');
         }
         //println!("Tick {}: {}", cycle, cpu.x);
         cpu.tick();
     }
-    println!("{}", total_signal_strength)
+    print!("{}", crt_output)
 }
