@@ -27,16 +27,20 @@ static int is_numerical(char c) { return c >= '0' && c <= '9'; }
 
 int64_t *program_end(program_t program) { return program.data + program.len; }
 
-void pretty_print_program(FILE *f, program_t program) {
+void pretty_print_program(FILE *f, program_t program, int print_offsets) {
   int64_t *ip = program.data;
   do {
-    if (opcode(*ip) == k_halt_op) {
+    if (print_offsets) {
+      fprintf(f, "%d: ", ip - program.data);
+    }
+    int64_t this_opcode = opcode(binary_to_bcd(*ip));
+    if (this_opcode == k_halt_op) {
       advance(program.data, program.len, &ip, 1);
       fprintf(f, "%d\n", *(ip - 1));
-    } else if (opcode(*ip) == k_input_op || opcode(*ip) == k_output_op) {
+    } else if (this_opcode == k_input_op || this_opcode == k_output_op) {
       advance(program.data, program.len, &ip, 2);
       fprintf(f, "%d, %d\n", *(ip - 2), *(ip - 1));
-    } else if (opcode(*ip) == k_add_op || opcode(*ip) == k_mult_op) {
+    } else if (this_opcode == k_add_op || this_opcode == k_mult_op) {
       advance(program.data, program.len, &ip, 4);
       fprintf(f, "%d, %d, %d, %d\n", *(ip - 4), *(ip - 3),
               *(ip - 2), *(ip - 1));
@@ -54,6 +58,18 @@ void pretty_print_program(FILE *f, program_t program) {
   } while (ip < program_end(program));
 }
 
+void debug_print_process(const char* path, process_t* process) {
+  FILE *f = fopen(path, "w");
+  program_t faux_program = {
+    .data = process->data,
+    .len = process->len,
+    .buffer_len = process->buffer_len,
+  };
+  fprintf(f, "IP: %d\n", process->ip - process->data);
+  pretty_print_program(f, faux_program, 1);
+  fclose(f);
+}
+
 program_t program_from_text_file(FILE *f) {
   int64_t *data = malloc(sizeof(int64_t) * k_max_program_size);
   int64_t *rp = data;
@@ -65,7 +81,7 @@ program_t program_from_text_file(FILE *f) {
     // Read number.
     while (1) {
       cur = fgetc(f);
-      if (is_numerical(cur)) {
+      if (is_numerical(cur) || (bp == buffer && cur == '-')) {
         *(bp++) = (char)cur;
       } else {
         // Okay to drop this character.
@@ -84,7 +100,7 @@ program_t program_from_text_file(FILE *f) {
       cur = fgetc(f);
       if (cur == EOF) {
         break;
-      } else if (is_numerical(cur)) {
+      } else if (is_numerical(cur) || (bp == buffer && cur == '-')) {
         *(bp++) = (char)cur;
         break;
       }
@@ -142,12 +158,22 @@ static void perform_binary_op(process_t *process, int64_t instruction,
       get_arg_value(process, argument_mode(instruction, 0), *(process->ip - 3));
   int64_t arg2 =
       get_arg_value(process, argument_mode(instruction, 1), *(process->ip - 2));
-  // NOTE: We ignore the arg mode bit on the third argument.
+  if (argument_mode(instruction, 2) != 0) {
+    fprintf(stderr, "Invalid instruction. Encountered output offset not in position mode.\n");
+    exit(1);
+  }
   *(process->data + *(process->ip - 1)) = op(process, arg1, arg2);
 }
 
 process_status execute(process_t *process) {
   while (process->ip < process->data + process->len) {
+    #ifdef DEBUG
+    const size_t debug_path_len = 256;
+    char debug_path[debug_path_len];
+    snprintf(debug_path, debug_path_len, "debug/%d.out", process->step); 
+    debug_print_process(debug_path, process); 
+    #endif
+
     int64_t bytecode = binary_to_bcd(*(process->ip));
     if (opcode(bytecode) == k_add_op) {
       perform_binary_op(process, bytecode, add_op);
@@ -157,8 +183,12 @@ process_status execute(process_t *process) {
       if (buffer_empty(process->input)) {
         return AWAITING_READ;
       }
+      // TODO: Implement argument modes for this instruction.
       advance(process->data, process->len, &(process->ip), 2);
-      *(process->data + *(process->ip - 1)) = buffer_read(process->input);
+      int64_t read_value = buffer_read(process->input);
+      int64_t offset = *(process->ip - 1);
+      fprintf(stderr, "Inputting read value %jd at location %jd.\n", read_value, offset);
+      *(process->data + offset) = read_value;
     } else if (opcode(bytecode) == k_output_op) {
       if (buffer_full(process->output)) {
         return AWAITING_WRITE;
@@ -174,6 +204,7 @@ process_status execute(process_t *process) {
               *(process->ip), process->ip - process->data);
       exit(1);
     }
+    process->step += 1;
   }
   return HALTED;
 }
@@ -194,6 +225,7 @@ process_t *instantiate_process_from_buffer(program_t program, int64_t *buffer,
   process->ip = buffer;
   process->input = make_buffer(k_io_size);
   process->output = make_buffer(k_io_size);
+  process->step = 0;
   return process;
 }
 
@@ -256,6 +288,10 @@ void buffer_write(buffer_t *buffer, int64_t val) {
 }
 
 int64_t argument_mode(uint64_t instruction, size_t argument) {
+  /* The trick to isolate the four bits is to shift the left end of the content
+   * to the left edge of the quadword, then to shift the right all the way to
+   * the right end of the quadword, erasing everything else.
+   */
   return (instruction << (64 -
                           (ARG_MODE_BITS * (argument + 1) + OPCODE_BITS))) >>
          (64 - ARG_MODE_BITS);

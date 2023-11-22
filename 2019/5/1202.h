@@ -53,6 +53,7 @@ typedef struct process_t {
   int64_t *ip;
   buffer_t *input;
   buffer_t *output;
+  size_t step;
 } process_t;
 
 int64_t *program_end(program_t program);
@@ -69,7 +70,7 @@ void destroy_process(process_t *process);
 
 void destroy_program(program_t program);
 
-void pretty_print_program(FILE *f, program_t program);
+void pretty_print_program(FILE *f, program_t program, int print_offsets);
 
 // NOTE: It is the caller's responsibility to free the program's memory.
 program_t program_from_text_file(FILE *f);

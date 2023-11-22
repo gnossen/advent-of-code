@@ -3,3 +3,7 @@ buffer_test
 pretty_print
 bytecode_test
 *.o
+debug/**
+*.out
+*.prompt
+input2.*

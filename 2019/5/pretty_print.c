@@ -8,6 +8,6 @@ int main(int argc, char **argv) {
   }
   // TODO: Also handle bytecode files.
   program_t program = program_from_text_filepath(argv[1]);
-  pretty_print_program(stdout, program);
+  pretty_print_program(stdout, program, 0);
   return 0;
 }
