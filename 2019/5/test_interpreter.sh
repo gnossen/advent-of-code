@@ -28,3 +28,5 @@ test_interpreter 11.1202 '' 11.output
 test_interpreter 12.1202 '' 12.output
 test_interpreter 13.1202 '' 13.output
 test_interpreter 14.1202 '' 14.output
+test_interpreter 15.1202 '' 15.output
+test_interpreter 16.1202 '' 16.output

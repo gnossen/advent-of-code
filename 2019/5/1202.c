@@ -44,7 +44,7 @@ void pretty_print_program(FILE *f, program_t program, int print_offsets) {
     } else if (this_opcode == k_input_op || this_opcode == k_output_op) {
       advance(program.data, program.len, &ip, 2);
       fprintf(f, "%d, %d\n", *(ip - 2), *(ip - 1));
-    } else if (this_opcode == k_add_op || this_opcode == k_mult_op) {
+    } else if (this_opcode == k_add_op || this_opcode == k_mult_op || this_opcode == k_less_than_op) {
       advance(program.data, program.len, &ip, 4);
       fprintf(f, "%d, %d, %d, %d\n", *(ip - 4), *(ip - 3),
               *(ip - 2), *(ip - 1));
@@ -140,6 +140,10 @@ static int64_t mult_op(process_t *process, int64_t a, int64_t b) {
   return a * b;
 }
 
+static int64_t less_than_op(process_t *process, int64_t a, int64_t b) {
+  return (a < b) ? 1 : 0;
+}
+
 typedef int64_t (*binary_op)(process_t *process, int64_t a, int64_t b);
 
 static int64_t get_arg_value(process_t *process, int64_t mode, uint64_t arg) {
@@ -222,6 +226,8 @@ process_status execute(process_t *process) {
       } else {
         advance(process->data, process->len, &(process->ip), 3);
       }
+    } else if (opcode(bytecode) == k_less_than_op) {
+      perform_binary_op(process, bytecode, less_than_op);
     } else if (opcode(bytecode) == k_halt_op) {
       return HALTED;
     } else {
