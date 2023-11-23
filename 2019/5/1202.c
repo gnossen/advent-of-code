@@ -150,10 +150,39 @@ static int64_t equals_op(process_t *process, int64_t a, int64_t b) {
 
 typedef int64_t (*binary_op)(process_t *process, int64_t a, int64_t b);
 
+void process_write(process_t *process, int64_t offset, int64_t value) {
+  if (offset < 0) {
+    fprintf(stderr, "Attempt to write value %ld at negative offset %ld.\n", value, offset);
+    exit(1);
+  }
+  if (offset > process->len) {
+    // TODO: Support this case.
+    fprintf(stderr, "Attempt to write value %ld at offset %ld when process only size %ld.\n", value, offset, process->len);
+    exit(1);
+  }
+
+  *(process->data + offset) = value;
+}
+
+
+int64_t process_read(process_t *process, int64_t offset) {
+  if (offset < 0) {
+    fprintf(stderr, "Attempt to read from negative offset %ld.\n", offset);
+    exit(1);
+  }
+  if (offset > process->len) {
+    // TODO: Support this case.
+    fprintf(stderr, "Attempt to read from offset %ld when process only size %ld.\n", offset, process->len);
+    exit(1);
+  }
+
+  return *(process->data + offset);
+}
+
 static int64_t get_arg_value(process_t *process, int64_t mode, uint64_t arg) {
   int64_t value;
   if (mode == POSITION_MODE) {
-    return *(process->data + arg);
+    return process_read(process, arg);
   } else {
     // IMMEDIATE_MODE
     return arg;
@@ -177,8 +206,9 @@ static void perform_binary_op(process_t *process, int64_t instruction,
     fprintf(stderr, "Invalid instruction. Encountered output offset not in position mode.\n");
     exit(1);
   }
-  *(process->data + *(process->ip - 1)) = op(process, arg1, arg2);
+  process_write(process, *(process->ip - 1), op(process, arg1, arg2));
 }
+
 
 process_status execute(process_t *process) {
   while (process->ip < process->data + process->len) {
@@ -202,7 +232,7 @@ process_status execute(process_t *process) {
       advance(process->data, process->len, &(process->ip), 2);
       int64_t read_value = buffer_read(process->input);
       int64_t offset = *(process->ip - 1);
-      *(process->data + offset) = read_value;
+      process_write(process, offset, read_value);
     } else if (opcode(bytecode) == k_output_op) {
       if (buffer_full(process->output)) {
         return AWAITING_WRITE;
