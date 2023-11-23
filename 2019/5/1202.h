@@ -48,6 +48,7 @@ typedef struct program_t {
 
 typedef struct process_t {
   int64_t *data;
+  // All data between len and buffer_len must be initialized to 0.
   size_t len;
   size_t buffer_len;
   int64_t ip_offset;

@@ -34,3 +34,4 @@ test_interpreter 17.1202 '' 17.output
 test_interpreter 18.1202 '' 18.output
 test_interpreter input2.1202 '1' 5.1.output
 test_interpreter input2.1202 '5' 5.5.output
+test_interpreter 19.1202 '' 19.output

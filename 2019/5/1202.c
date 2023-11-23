@@ -158,30 +158,39 @@ static int64_t equals_op(process_t *process, int64_t a, int64_t b) {
 
 typedef int64_t (*binary_op)(process_t *process, int64_t a, int64_t b);
 
+void process_buffer_grow(process_t *process, size_t new_size) {
+    size_t old_size = process->buffer_len;
+    process->data = realloc(process->data, sizeof(int64_t) * new_size);
+    memset(process->data + old_size, 0, sizeof(int64_t) * (new_size - old_size));
+    process->buffer_len = new_size;
+}
+
+void process_grow(process_t *process, int64_t offset) {
+    if (offset > process->buffer_len) {
+        process_buffer_grow(process, smallest_power_of_2_greater_than(offset));
+    }
+    process->len = offset + 1;
+}
+
 void process_write(process_t *process, int64_t offset, int64_t value) {
   if (offset < 0) {
     fprintf(stderr, "Attempt to write value %ld at negative offset %ld.\n", value, offset);
     exit(1);
   }
-  if (offset > process->len) {
-    // TODO: Support this case.
-    fprintf(stderr, "Attempt to write value %ld at offset %ld when process only size %ld.\n", value, offset, process->len);
-    exit(1);
+  if (offset >= process->len) {
+      process_grow(process, offset);
   }
 
   *(process->data + offset) = value;
 }
-
 
 int64_t process_read(process_t *process, int64_t offset) {
   if (offset < 0) {
     fprintf(stderr, "Attempt to read from negative offset %ld.\n", offset);
     exit(1);
   }
-  if (offset > process->len) {
-    // TODO: Support this case.
-    fprintf(stderr, "Attempt to read from offset %ld when process only size %ld.\n", offset, process->len);
-    exit(1);
+  if (offset >= process->len) {
+    process_grow(process, offset);
   }
 
   return *(process->data + offset);
@@ -214,20 +223,22 @@ static void perform_binary_op(process_t *process, int64_t instruction,
 
 process_status execute(process_t *process) {
   while (process->ip_offset < process->len) {
-    #ifdef DEBUG
-    const size_t debug_path_len = 256;
-    char debug_path[debug_path_len];
-    snprintf(debug_path, debug_path_len, "debug/%d.out", process->step);
-    debug_print_process(debug_path, process);
-    #endif
+    char *debug1202 = getenv("DEBUG1202");
+    if (debug1202 != NULL && strlen(debug1202) > 0) {
+      const size_t debug_path_len = 256;
+      char debug_path[debug_path_len];
+      snprintf(debug_path, debug_path_len, "debug/%d.out", process->step);
+      debug_print_process(debug_path, process);
+    }
 
     int64_t instruction = process_read(process, process->ip_offset);
     int64_t bytecode = binary_to_bcd(instruction);
-    if (opcode(bytecode) == k_add_op) {
+    int64_t this_opcode = opcode(bytecode);
+    if (this_opcode == k_add_op) {
       perform_binary_op(process, bytecode, add_op);
-    } else if (opcode(bytecode) == k_mult_op) {
+    } else if (this_opcode == k_mult_op) {
       perform_binary_op(process, bytecode, mult_op);
-    } else if (opcode(bytecode) == k_input_op) {
+    } else if (this_opcode == k_input_op) {
       if (buffer_empty(process->input)) {
         return AWAITING_READ;
       }
@@ -236,7 +247,7 @@ process_status execute(process_t *process) {
       int64_t read_value = buffer_read(process->input);
       int64_t offset = process_read(process, process->ip_offset - 1);
       process_write(process, offset, read_value);
-    } else if (opcode(bytecode) == k_output_op) {
+    } else if (this_opcode == k_output_op) {
       if (buffer_full(process->output)) {
         return AWAITING_WRITE;
       }
@@ -244,7 +255,7 @@ process_status execute(process_t *process) {
       int64_t arg = get_arg_value(process, argument_mode(bytecode, 0),
                                   process_read(process, process->ip_offset - 1));
       buffer_write(process->output, arg);
-    } else if (opcode(bytecode) == k_jump_if_true_op) {
+    } else if (this_opcode == k_jump_if_true_op) {
       int64_t arg = get_arg_value(process, argument_mode(bytecode, 0), process_read(process, process->ip_offset + 1));
       int64_t jmp_pos = get_arg_value(process, argument_mode(bytecode, 1), process_read(process, process->ip_offset + 2));
 
@@ -253,7 +264,7 @@ process_status execute(process_t *process) {
       } else {
         advance(process->len, &(process->ip_offset), 3);
       }
-    } else if (opcode(bytecode) == k_jump_if_false_op) {
+    } else if (this_opcode == k_jump_if_false_op) {
       int64_t arg = get_arg_value(process, argument_mode(bytecode, 0), process_read(process, process->ip_offset + 1));
       int64_t jmp_pos = get_arg_value(process, argument_mode(bytecode, 1), process_read(process, process->ip_offset + 2));
 
@@ -262,15 +273,15 @@ process_status execute(process_t *process) {
       } else {
         advance(process->len, &(process->ip_offset), 3);
       }
-    } else if (opcode(bytecode) == k_less_than_op) {
+    } else if (this_opcode == k_less_than_op) {
       perform_binary_op(process, bytecode, less_than_op);
-    } else if (opcode(bytecode) == k_equals_op) {
+    } else if (this_opcode == k_equals_op) {
       perform_binary_op(process, bytecode, equals_op);
-    } else if (opcode(bytecode) == k_halt_op) {
+    } else if (this_opcode == k_halt_op) {
       return HALTED;
     } else {
       fprintf(stderr, "Unrecognized opcode %jd in instruction %jd at location %d.\n",
-              opcode, instruction, process->ip_offset);
+              this_opcode, instruction, process->ip_offset);
       exit(1);
     }
     process->step += 1;
