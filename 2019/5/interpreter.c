@@ -7,14 +7,14 @@ static char input_buffer[30];
 
 void drain_output(buffer_t *output) {
   while (!buffer_empty(output)) {
-    printf("%d\n", buffer_read(output));
+    printf("%jd\n", buffer_read(output));
   }
 }
 
 uint64_t get_one_input() {
   uint64_t input_val;
   fgets(input_buffer, sizeof(input_buffer), stdin);
-  return atoi(input_buffer);
+  return strtoll(input_buffer, NULL, 10);
 }
 
 void run_program_loop(process_t *process) {

@@ -55,6 +55,7 @@ typedef struct process_t {
   buffer_t *input;
   buffer_t *output;
   size_t step;
+  int64_t relative_base;
 } process_t;
 
 process_t *instantiate_process_from_buffer(program_t program, int64_t *buffer,
@@ -90,6 +91,7 @@ static const size_t ARG_MODE_BITS = 4;
 static const int64_t OPCODE_MASK = (1 << OPCODE_BITS) - 1;
 static const int64_t POSITION_MODE = 0;
 static const int64_t IMMEDIATE_MODE = 1;
+static const int64_t RELATIVE_MODE = 2;
 
 /* Instructions are translated from a textual decimal representation to a
  * binary representation.

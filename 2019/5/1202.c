@@ -10,6 +10,7 @@ static const int64_t k_jump_if_true_op = 5;
 static const int64_t k_jump_if_false_op = 6;
 static const int64_t k_less_than_op = 7;
 static const int64_t k_equals_op = 8;
+static const int64_t k_adjust_relative_base_op = 9;
 static const int64_t k_halt_op = 99;
 
 static const size_t k_max_program_size = 1 << 14;
@@ -17,13 +18,6 @@ static const size_t k_io_size = 1 << 10;
 
 // Can be used on both programs *and* processes.
 static void advance(size_t len, int64_t *ip_offset, size_t steps) {
-  if (*ip_offset + steps > len + 1) {
-    fprintf(stderr,
-            "Malformed program. Attempt to advance to position %d when buffer "
-            "is only of size %d.\n",
-            ip_offset + steps, len);
-    exit(1);
-  }
   (*ip_offset) += steps;
 }
 
@@ -38,22 +32,22 @@ void pretty_print_program(FILE *f, program_t program, int print_offsets) {
     int64_t this_opcode = opcode(binary_to_bcd(*(program.data + ip_offset)));
     if (this_opcode == k_halt_op) {
       advance(program.len, &ip_offset, 1);
-      fprintf(f, "%d\n", *(program.data + ip_offset - 1));
-    } else if (this_opcode == k_input_op || this_opcode == k_output_op) {
+      fprintf(f, "%jd\n", *(program.data + ip_offset - 1));
+    } else if (this_opcode == k_input_op || this_opcode == k_output_op || this_opcode == k_adjust_relative_base_op) {
       advance(program.len, &ip_offset, 2);
-      fprintf(f, "%d, %d\n", *(program.data + ip_offset - 2), *(program.data + ip_offset - 1));
+      fprintf(f, "%jd, %jd\n", *(program.data + ip_offset - 2), *(program.data + ip_offset - 1));
     } else if (this_opcode == k_add_op || this_opcode == k_mult_op || this_opcode == k_less_than_op || this_opcode == k_equals_op) {
       advance(program.len, &ip_offset, 4);
-      fprintf(f, "%d, %d, %d, %d\n", *(program.data + ip_offset - 4), *(program.data + ip_offset - 3),
+      fprintf(f, "%jd, %jd, %jd, %jd\n", *(program.data + ip_offset - 4), *(program.data + ip_offset - 3),
               *(program.data + ip_offset - 2), *(program.data + ip_offset - 1));
     } else if (this_opcode == k_jump_if_true_op || this_opcode == k_jump_if_false_op) {
       advance(program.len, &ip_offset, 3);
-      fprintf(f, "%d, %d, %d\n", *(program.data + ip_offset - 3), *(program.data + ip_offset - 2), *(program.data + ip_offset - 1));
+      fprintf(f, "%jd, %jd, %jd\n", *(program.data + ip_offset - 3), *(program.data + ip_offset - 2), *(program.data + ip_offset - 1));
     } else {
       size_t upper = MIN(4, program.len - (ip_offset));
       for (size_t i = 0; i < upper; ++i) {
         advance(program.len, &ip_offset, 1);
-        fprintf(f, "%d", *(program.data + ip_offset - 1));
+        fprintf(f, "%jd", *(program.data + ip_offset - 1));
         if (ip_offset != program.len && i != (upper - 1)) {
           fprintf(f, ", ");
         }
@@ -71,6 +65,7 @@ void debug_print_process(const char* path, process_t* process) {
     .buffer_len = process->buffer_len,
   };
   fprintf(f, "IP: %d\n", process->ip_offset);
+  fprintf(f, "Relative base: %d\n", process->relative_base);
   pretty_print_program(f, faux_program, 1);
   fclose(f);
 }
@@ -97,7 +92,7 @@ program_t program_from_text_file(FILE *f) {
       } else {
         // Okay to drop this character.
         *bp = '\0';
-        *(rp++) = atoi(buffer);
+        *(rp++) = strtoll(buffer, NULL, 10);
         bp = buffer;
         break;
       }
@@ -200,9 +195,13 @@ static int64_t get_arg_value(process_t *process, int64_t mode, uint64_t arg) {
   int64_t value;
   if (mode == POSITION_MODE) {
     return process_read(process, arg);
-  } else {
-    // IMMEDIATE_MODE
+  } else if (mode == IMMEDIATE_MODE) {
     return arg;
+  } else if (mode == RELATIVE_MODE) {
+    return process_read(process, arg + process->relative_base);
+  } else {
+    fprintf(stderr, "Encountered unknown argument mode %jd\n", mode);
+    exit(1);
   }
 }
 
@@ -213,11 +212,18 @@ static void perform_binary_op(process_t *process, int64_t instruction,
       get_arg_value(process, argument_mode(instruction, 0), process_read(process, process->ip_offset - 3));
   int64_t arg2 =
       get_arg_value(process, argument_mode(instruction, 1), process_read(process, process->ip_offset - 2));
-  if (argument_mode(instruction, 2) != 0) {
-    fprintf(stderr, "Invalid instruction. Encountered output offset not in position mode.\n");
+
+  // TODO: Dedupe with input instruction.
+  int64_t offset = process_read(process, process->ip_offset - 1);
+  int64_t offset_mode = argument_mode(instruction, 2);
+  if (offset_mode == POSITION_MODE) {
+    process_write(process, offset, op(process, arg1, arg2));
+  } else if (offset_mode == RELATIVE_MODE) {
+    process_write(process, offset + process->relative_base, op(process, arg1, arg2));
+  } else {
+    fprintf(stderr, "Invalid instruction. Encountered output offset with unknown mode %jd.\n", offset_mode);
     exit(1);
   }
-  process_write(process, process_read(process, process->ip_offset - 1), op(process, arg1, arg2));
 }
 
 
@@ -242,11 +248,18 @@ process_status execute(process_t *process) {
       if (buffer_empty(process->input)) {
         return AWAITING_READ;
       }
-      // TODO: Implement argument modes for this instruction.
       advance(process->len, &(process->ip_offset), 2);
       int64_t read_value = buffer_read(process->input);
       int64_t offset = process_read(process, process->ip_offset - 1);
-      process_write(process, offset, read_value);
+      int64_t mode = argument_mode(bytecode, 0);
+      if (mode == POSITION_MODE) {
+        process_write(process, offset, read_value);
+      } else if (mode == RELATIVE_MODE) {
+        process_write(process, offset + process->relative_base, read_value);
+      } else {
+        fprintf(stderr, "Encountered unsupported argument mode %jd\n", mode);
+        exit(1);
+      }
     } else if (this_opcode == k_output_op) {
       if (buffer_full(process->output)) {
         return AWAITING_WRITE;
@@ -255,6 +268,11 @@ process_status execute(process_t *process) {
       int64_t arg = get_arg_value(process, argument_mode(bytecode, 0),
                                   process_read(process, process->ip_offset - 1));
       buffer_write(process->output, arg);
+    } else if (this_opcode == k_adjust_relative_base_op) {
+      advance(process->len, &(process->ip_offset), 2);
+      int64_t arg = get_arg_value(process, argument_mode(bytecode, 0),
+                                  process_read(process, process->ip_offset - 1));
+      process->relative_base += arg;
     } else if (this_opcode == k_jump_if_true_op) {
       int64_t arg = get_arg_value(process, argument_mode(bytecode, 0), process_read(process, process->ip_offset + 1));
       int64_t jmp_pos = get_arg_value(process, argument_mode(bytecode, 1), process_read(process, process->ip_offset + 2));
@@ -306,6 +324,7 @@ process_t *instantiate_process_from_buffer(program_t program, int64_t *buffer,
   process->input = make_buffer(k_io_size);
   process->output = make_buffer(k_io_size);
   process->step = 0;
+  process->relative_base = 0;
   return process;
 }
 

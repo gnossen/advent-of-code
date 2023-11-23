@@ -35,3 +35,9 @@ test_interpreter 18.1202 '' 18.output
 test_interpreter input2.1202 '1' 5.1.output
 test_interpreter input2.1202 '5' 5.5.output
 test_interpreter 19.1202 '' 19.output
+test_interpreter 20.1202 '' 20.output
+test_interpreter 21.1202 '' 21.output
+test_interpreter 22.1202 '' 22.output
+test_interpreter 23.1202 '' 23.output
+test_interpreter input3.1202 '1' 9.1.output
+test_interpreter input3.1202 '2' 9.2.output

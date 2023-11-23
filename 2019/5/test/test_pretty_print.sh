@@ -29,3 +29,4 @@ test_file_pair 12.1202 12.pretty.1202
 test_file_pair 14.1202 14.pretty.1202
 test_file_pair 16.1202 16.pretty.1202
 test_file_pair 18.1202 18.pretty.1202
+test_file_pair 20.1202 20.pretty.1202
