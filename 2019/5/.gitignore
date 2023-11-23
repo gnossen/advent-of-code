@@ -6,4 +6,3 @@ bytecode_test
 debug/**
 *.out
 *.prompt
-input2.*
