@@ -50,13 +50,11 @@ typedef struct process_t {
   int64_t *data;
   size_t len;
   size_t buffer_len;
-  int64_t *ip;
+  int64_t ip_offset;
   buffer_t *input;
   buffer_t *output;
   size_t step;
 } process_t;
-
-int64_t *program_end(program_t program);
 
 process_t *instantiate_process_from_buffer(program_t program, int64_t *buffer,
                                            size_t buffer_len);
