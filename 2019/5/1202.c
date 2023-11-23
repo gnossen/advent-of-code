@@ -6,6 +6,10 @@ static const int64_t k_add_op = 1;
 static const int64_t k_mult_op = 2;
 static const int64_t k_input_op = 3;
 static const int64_t k_output_op = 4;
+static const int64_t k_jump_if_true_op = 5;
+static const int64_t k_jump_if_false_op = 6;
+static const int64_t k_less_than_op = 7;
+static const int64_t k_equals_op = 8;
 static const int64_t k_halt_op = 99;
 
 static const size_t k_max_program_size = 1 << 14;
@@ -44,6 +48,9 @@ void pretty_print_program(FILE *f, program_t program, int print_offsets) {
       advance(program.data, program.len, &ip, 4);
       fprintf(f, "%d, %d, %d, %d\n", *(ip - 4), *(ip - 3),
               *(ip - 2), *(ip - 1));
+    } else if (this_opcode == k_jump_if_true_op) {
+      advance(program.data, program.len, &ip, 3);
+      fprintf(f, "%d, %d, %d\n", *(ip - 3), *(ip - 2), *(ip - 1));
     } else {
       size_t upper = MIN(4, program.len - (ip - program.data));
       for (size_t i = 0; i < upper; ++i) {
@@ -197,11 +204,20 @@ process_status execute(process_t *process) {
       int64_t arg = get_arg_value(process, argument_mode(bytecode, 0),
                                   *(process->ip - 1));
       buffer_write(process->output, arg);
+    } else if (opcode(bytecode) == k_jump_if_true_op) {
+      int64_t arg = get_arg_value(process, argument_mode(bytecode, 0), *(process->ip + 1));
+      int64_t jmp_pos = get_arg_value(process, argument_mode(bytecode, 1), *(process->ip + 2));
+      
+      if (arg != 0) {
+        process->ip = process->data + jmp_pos;
+      } else {
+        advance(process->data, process->len, &(process->ip), 3);
+      }
     } else if (opcode(bytecode) == k_halt_op) {
       return HALTED;
     } else {
-      fprintf(stderr, "Unrecognized opcode %d at location %d.\n",
-              *(process->ip), process->ip - process->data);
+      fprintf(stderr, "Unrecognized opcode %jd in instruction %jd at location %d.\n",
+              opcode, *(process->ip), process->ip - process->data);
       exit(1);
     }
     process->step += 1;
