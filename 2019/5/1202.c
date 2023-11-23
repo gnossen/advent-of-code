@@ -202,7 +202,6 @@ process_status execute(process_t *process) {
       advance(process->data, process->len, &(process->ip), 2);
       int64_t read_value = buffer_read(process->input);
       int64_t offset = *(process->ip - 1);
-      fprintf(stderr, "Inputting read value %jd at location %jd.\n", read_value, offset);
       *(process->data + offset) = read_value;
     } else if (opcode(bytecode) == k_output_op) {
       if (buffer_full(process->output)) {
