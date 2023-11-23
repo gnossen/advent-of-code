@@ -75,6 +75,12 @@ void debug_print_process(const char* path, process_t* process) {
   fclose(f);
 }
 
+static size_t smallest_power_of_2_greater_than(size_t n) {
+    size_t i = 1;
+    while (i <= n) { i <<= 1; }
+    return i;
+}
+
 program_t program_from_text_file(FILE *f) {
   int64_t *data = malloc(sizeof(int64_t) * k_max_program_size);
   int64_t *rp = data;
@@ -111,11 +117,15 @@ program_t program_from_text_file(FILE *f) {
       }
     }
   }
-  // NOTE: Shrink down to the smallest possible size for maximum performance.
+  // Shrink down to the smallest power of 2 big enough to contain the program.
   size_t program_len = rp - data;
-  data = realloc(data, sizeof(int64_t) * program_len);
+  size_t buffer_size = smallest_power_of_2_greater_than(program_len);
+  data = realloc(data, sizeof(int64_t) * buffer_size);
+
+  // Set everything beyond the program to 0.
+  memset(data + program_len, 0, sizeof(int64_t) * (buffer_size - program_len));
   program_t program = {
-      .data = data, .len = program_len, .buffer_len = program_len};
+      .data = data, .len = program_len, .buffer_len = buffer_size};
   return program;
 }
 
