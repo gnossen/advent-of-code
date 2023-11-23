@@ -48,7 +48,7 @@ void pretty_print_program(FILE *f, program_t program, int print_offsets) {
       advance(program.data, program.len, &ip, 4);
       fprintf(f, "%d, %d, %d, %d\n", *(ip - 4), *(ip - 3),
               *(ip - 2), *(ip - 1));
-    } else if (this_opcode == k_jump_if_true_op) {
+    } else if (this_opcode == k_jump_if_true_op || this_opcode == k_jump_if_false_op) {
       advance(program.data, program.len, &ip, 3);
       fprintf(f, "%d, %d, %d\n", *(ip - 3), *(ip - 2), *(ip - 1));
     } else {
@@ -209,6 +209,15 @@ process_status execute(process_t *process) {
       int64_t jmp_pos = get_arg_value(process, argument_mode(bytecode, 1), *(process->ip + 2));
       
       if (arg != 0) {
+        process->ip = process->data + jmp_pos;
+      } else {
+        advance(process->data, process->len, &(process->ip), 3);
+      }
+    } else if (opcode(bytecode) == k_jump_if_false_op) {
+      int64_t arg = get_arg_value(process, argument_mode(bytecode, 0), *(process->ip + 1));
+      int64_t jmp_pos = get_arg_value(process, argument_mode(bytecode, 1), *(process->ip + 2));
+      
+      if (arg == 0) {
         process->ip = process->data + jmp_pos;
       } else {
         advance(process->data, process->len, &(process->ip), 3);
