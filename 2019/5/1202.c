@@ -205,6 +205,18 @@ static int64_t get_arg_value(process_t *process, int64_t mode, uint64_t arg) {
   }
 }
 
+static void write_based_on_arg(process_t *process, int64_t arg_mode, int64_t arg_offset, int64_t value) {
+  int64_t arg = process_read(process, arg_offset);
+  if (arg_mode == POSITION_MODE) {
+    process_write(process, arg, value);
+  } else if (arg_mode == RELATIVE_MODE) {
+    process_write(process, arg + process->relative_base, value);
+  } else {
+    fprintf(stderr, "Invalid instruction. Encountered output offset with unknown mode %jd.\n", arg_mode);
+    exit(1);
+  }
+}
+
 static void perform_binary_op(process_t *process, int64_t instruction,
                               binary_op op) {
   advance(process->len, &(process->ip_offset), 4);
@@ -213,17 +225,7 @@ static void perform_binary_op(process_t *process, int64_t instruction,
   int64_t arg2 =
       get_arg_value(process, argument_mode(instruction, 1), process_read(process, process->ip_offset - 2));
 
-  // TODO: Dedupe with input instruction.
-  int64_t offset = process_read(process, process->ip_offset - 1);
-  int64_t offset_mode = argument_mode(instruction, 2);
-  if (offset_mode == POSITION_MODE) {
-    process_write(process, offset, op(process, arg1, arg2));
-  } else if (offset_mode == RELATIVE_MODE) {
-    process_write(process, offset + process->relative_base, op(process, arg1, arg2));
-  } else {
-    fprintf(stderr, "Invalid instruction. Encountered output offset with unknown mode %jd.\n", offset_mode);
-    exit(1);
-  }
+  write_based_on_arg(process, argument_mode(instruction, 2), process->ip_offset - 1, op(process, arg1, arg2));
 }
 
 
@@ -250,16 +252,8 @@ process_status execute(process_t *process) {
       }
       advance(process->len, &(process->ip_offset), 2);
       int64_t read_value = buffer_read(process->input);
-      int64_t offset = process_read(process, process->ip_offset - 1);
       int64_t mode = argument_mode(bytecode, 0);
-      if (mode == POSITION_MODE) {
-        process_write(process, offset, read_value);
-      } else if (mode == RELATIVE_MODE) {
-        process_write(process, offset + process->relative_base, read_value);
-      } else {
-        fprintf(stderr, "Encountered unsupported argument mode %jd\n", mode);
-        exit(1);
-      }
+      write_based_on_arg(process, mode, process->ip_offset - 1, read_value);
     } else if (this_opcode == k_output_op) {
       if (buffer_full(process->output)) {
         return AWAITING_WRITE;
