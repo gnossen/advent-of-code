@@ -2,6 +2,8 @@
 
 set -e
 
+cd $(dirname -- "${BASH_SOURCE[0]}")
+
 echo "Test pretty_printer"
 ./test_pretty_print.sh
 

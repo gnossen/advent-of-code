@@ -4,7 +4,7 @@ function test_file_pair () {
   INPUT="$1"
   EXPECTED="$2" 
   TEMPFILE=$(mktemp)
-  ./pretty_print "$INPUT" >"$TEMPFILE"
+  ../pretty_print "$INPUT" >"$TEMPFILE"
   RET="$?"
   if [ "$RET" != "0" ]; then
     echo "FAILURE" >/dev/stderr

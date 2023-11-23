@@ -1,4 +1,4 @@
-#include "1202.h"
+#include "../1202.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

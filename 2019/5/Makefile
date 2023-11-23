@@ -1,4 +1,4 @@
-EXECUTABLES=interpreter pretty_print buffer_test buffer_test bytecode_test
+EXECUTABLES=interpreter pretty_print test/buffer_test test/bytecode_test
 
 .PHONY: all
 all: ${EXECUTABLES}
@@ -12,15 +12,15 @@ interpreter: interpreter.o 1202.o
 pretty_print: pretty_print.o 1202.o
 	gcc $^ -o $@
 
-buffer_test: buffer_test.o 1202.o
+test/buffer_test: test/buffer_test.o 1202.o
 	gcc $^ -o $@
 
-bytecode_test: bytecode_test.o 1202.o
+test/bytecode_test: test/bytecode_test.o 1202.o
 	gcc $^ -o $@
 
 .PHONY: test
-test: buffer_test bytecode_test pretty_print interpreter
-	./test.sh
+test: test/buffer_test test/bytecode_test pretty_print interpreter
+	./test/test.sh
 
 .PHONY: clean
 clean:

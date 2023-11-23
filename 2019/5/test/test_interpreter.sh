@@ -5,7 +5,7 @@ function test_interpreter () {
   INPUT="$2"
   EXPECTED="$3"
   TEMPFILE=$(mktemp)
-  printf "$INPUT" | ./interpreter "$PROGRAM" >"$TEMPFILE"
+  printf "$INPUT" | ../interpreter "$PROGRAM" >"$TEMPFILE"
   RET="$?"
   if [ "$RET" != "0" ]; then
     echo "FAILURE" >/dev/stderr
