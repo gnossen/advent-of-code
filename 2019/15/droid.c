@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 #define DIRECTION_COUNT 4
 #define NO_DIRECTION 5
@@ -18,6 +19,8 @@ coord_t directions[] = {
   {-1, 0},
   {1, 0},
 };
+
+size_t FPS = 32;
 
 int64_t lookup_direction(coord_t direction) {
   for (int64_t i = 0; i < 4; ++i) {
@@ -104,19 +107,23 @@ void print_grid(dynamic_grid_t *grid, coord_t current) {
  *
  * direction_index - the index of the direction used to get to this tile from
  *   the previous. The reverse direction is used in backtracking.
+ * target - Out param. The location of the target.
  */
 int64_t visit_node(
     coord_t coord,
     size_t distance_from_origin,
     dynamic_grid_t *grid,
     process_t *process,
-    size_t direction_index)
+    size_t direction_index,
+    coord_t *target,
+    bool draw)
 {
   // printf("Visiting (%jd, %jd)\n", coord.x, coord.y);
 
   // At this point, the robot is at coord and the current coord has already been marked.
   if (get_point(grid, coord) == TARGET) {
     backtrack(process, direction_index);
+    *target = coord;
     return distance_from_origin;
   }
 
@@ -128,12 +135,14 @@ int64_t visit_node(
       grid_status status = go_in_direction(i, process);
       set_point(grid, candidate, status);
 
-      print_grid(grid, coord);
-      usleep(31250);
+      if (draw) {
+        print_grid(grid, coord);
+        usleep(1000000 / FPS);
+      }
 
       if (status != WALL) {
         // printf("  Visiting non-wall at (%jd, %jd)\n", candidate.x, candidate.y);
-        int64_t dist = visit_node(candidate, distance_from_origin + 1, grid, process, i);
+        int64_t dist = visit_node(candidate, distance_from_origin + 1, grid, process, i, target, draw);
         // printf("Returning to (%jd, %jd)\n", coord.x, coord.y);
         if (dist != -1 && dist < min_dist) {
           min_dist = dist;
@@ -155,57 +164,34 @@ int64_t visit_node(
 }
 
 int main(int argc, int **argv) {
+  char *fps_str = getenv("FPS");
+  if (fps_str != NULL && strlen(fps_str) > 0) {
+    // TODO: Parse error checking.
+    FPS = atoi(fps_str);
+  }
+
+  char *draw_exploration_str = getenv("DRAW_EXPLORATION");
+  bool draw_exploration = false;
+  if (draw_exploration_str != NULL && strlen(draw_exploration_str) > 0) {
+    draw_exploration = true;
+  }
+
   program_t program = program_from_text_filepath("puzzle.1202");
   process_t *process = instantiate_process(program);
 
-  // stack_t *stack = create_stack();
   dynamic_grid_t *grid = create_dynamic_grid();
 
   coord_t origin = {0, 0};
-  int64_t dist = visit_node(origin, 0, grid, process, NO_DIRECTION);
+  coord_t target;
+  int64_t dist = visit_node(origin, 0, grid, process, NO_DIRECTION, &target, draw_exploration);
   printf("Distance: %d\n", dist);
+  printf("Target location: (%jd, %jd)\n", target.x, target.y);
 
-  // stack_push(stack, current);
-
-  // while (1) {
-  //   // At this point the droid is located at current
-  //   // and there is a corresponding stack entry for it at the top.
-  //   if (get_point(grid, current) == UNKNOWN) {
-  //     set_point(grid, current, EMPTY);
-  //     for (size_t i = 0; i < 4; ++i) {
-  //       coord_t candidate = coord_add(current, directions[i]);
-  //       if (get_point(candidate) == UNKNOWN) {
-  //         stack_push(stack, candidate);
-  //       }
-  //     }
-  //   } else {
-  //     stack_pop(grid);
-  //   }
-
-  //   // At this point, we should be considering the top element of
-  //   // the stack, which is guaranteed to be only one tile away.
-  //   while (1) {
-  //     coord_t candidate = stack_peek(stack);
-  //     coord_t direction = coord_sub(candidate, current);
-  //     int64_t dir_code = lookup_direction(direction);
-  //     buffer_write(process->input, dir_code);
-  //     process_status status = execute(process);
-  //     assert(status == AWAITING_WRITE);
-  //     int64_t resp = buffer_read(process->output);
-  //     if (resp == 0) {
-  //       set_point(candidate, WALL);
-  //       stack_pop(stack);
-  //     } else if (resp == 1) {
-  //       current = candidate;
-  //       break;
-  //     } else {
-  //       // TODO: Print screen.
-  //     }
-  //   }
-  // }
+  // Stack for BFS of part 2.
+  stack_t *stack = create_stack();
+  destroy_stack(stack);
 
   destroy_dynamic_grid(grid);
-  // destroy_stack(stack);
   destroy_process(process);
   destroy_program(program);
   return 0;

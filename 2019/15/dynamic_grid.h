@@ -17,7 +17,8 @@ typedef enum grid_status {
   UNKNOWN,
   WALL,
   EMPTY,
-  TARGET
+  TARGET,
+  OXYGEN,
 } grid_status;
 
 typedef struct dynamic_grid_t {
