@@ -2,9 +2,36 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 // TODO: Remove.
 #include <stdio.h>
+
+coord_t make_coord(int64_t x, int64_t y) {
+  coord_t z = {
+    .x = x,
+    .y = y,
+  };
+  return z;
+}
+
+coord_t coord_add(coord_t a, coord_t b) {
+  coord_t c = {
+    .x = a.x + b.x,
+    .y = a.y + b.y,
+  };
+
+  return c;
+}
+
+coord_t coord_sub(coord_t a, coord_t b) {
+  coord_t c = {
+    .x = a.x - b.x,
+    .y = a.y - b.y,
+  };
+
+  return c;
+}
 
 dynamic_grid_t *create_dynamic_grid() {
   dynamic_grid_t *grid = malloc(sizeof(dynamic_grid_t));
@@ -28,7 +55,7 @@ static size_t determine_scale(int64_t capacity, int64_t requirement) {
   int64_t directional_capacity = capacity / 2;
   int64_t difference = llabs(directional_capacity - requirement);
   size_t multiplier = 1;
-  while (directional_capacity < difference) {
+  while (directional_capacity <= difference) {
     directional_capacity *= 2;
     multiplier *= 2;
   }
@@ -41,6 +68,8 @@ static void grow_capacity(dynamic_grid_t *grid, coord_t coord) {
   size_t x_scale = determine_scale(grid->capacity.x, coord.x);
   size_t y_scale = determine_scale(grid->capacity.x, coord.y);
   size_t scale = (x_scale > y_scale) ? x_scale : y_scale;
+  assert(scale > 1);
+  // printf("Growing capacity by scale %d.\n", scale);
 
   coord_t new_capacity = {
     .x = grid->capacity.x * scale,
@@ -102,6 +131,7 @@ static bool out_of_bounds(dynamic_grid_t *grid, coord_t coord) {
 
 
 void set_point(dynamic_grid_t *grid, coord_t coord, grid_status status) {
+  // printf("grid_trace: set_point((%jd, %jd), %d)\n", coord.x, coord.y, status);
   if (!grid->has_points) {
     // Put the point at the center of the allocated grid.
     grid->has_points = true;
@@ -125,15 +155,20 @@ void set_point(dynamic_grid_t *grid, coord_t coord, grid_status status) {
     adjusted_coord = to_grid_native(grid, coord);
   }
 
+  // printf("  stored (%jd, %jd) at (%jd, %jd)\n", coord.x, coord.y, adjusted_coord.x, adjusted_coord.y);
   grid->data[adjusted_coord.y * grid->capacity.x + adjusted_coord.x] = status;
 }
 
 grid_status get_point(dynamic_grid_t *grid, coord_t coord) {
   coord_t adjusted_coord = to_grid_native(grid, coord);
 
+  // printf("  retrieving (%jd, %jd) from (%jd, %jd)\n", coord.x, coord.y, adjusted_coord.x, adjusted_coord.y);
   if (out_of_bounds(grid, adjusted_coord)) {
+    // printf("grid_trace: get_point((%jd, %jd)) = 0 (out of bounds)\n", coord.x, coord.y);
     return UNKNOWN;
   }
 
-  return grid->data[adjusted_coord.y * grid->capacity.x + adjusted_coord.x];
+  grid_status val = grid->data[adjusted_coord.y * grid->capacity.x + adjusted_coord.x];
+  // printf("grid_trace: get_point((%jd, %jd)) = %d\n", coord.x, coord.y, val);
+  return val;
 }
