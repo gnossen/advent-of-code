@@ -24,7 +24,7 @@ void destroy_dynamic_grid(dynamic_grid_t *grid) {
 
 // Determines the multiplicative scale by which the buffer must grow to
 // accommodate the new point.
-static size_t determine_scale(int64_t capacity, int64_t translation, int64_t requirement) {
+static size_t determine_scale(int64_t capacity, int64_t requirement) {
   int64_t directional_capacity = capacity / 2;
   int64_t difference = llabs(directional_capacity - requirement);
   size_t multiplier = 1;
@@ -38,8 +38,8 @@ static size_t determine_scale(int64_t capacity, int64_t translation, int64_t req
 /* coord must be in the native coordinate system of the buffer, i.e. no translation needed.
  */
 static void grow_capacity(dynamic_grid_t *grid, coord_t coord) {
-  size_t x_scale = determine_scale(grid->capacity.x, grid->translation.x, coord.x);
-  size_t y_scale = determine_scale(grid->capacity.x, grid->translation.y, coord.y);
+  size_t x_scale = determine_scale(grid->capacity.x, coord.x);
+  size_t y_scale = determine_scale(grid->capacity.x, coord.y);
   size_t scale = (x_scale > y_scale) ? x_scale : y_scale;
 
   coord_t new_capacity = {
@@ -108,7 +108,15 @@ void set_point(dynamic_grid_t *grid, coord_t coord, grid_status status) {
 
     grid->translation.x = (grid->capacity.x / 2) - coord.x;
     grid->translation.y = (grid->capacity.y / 2) - coord.y;
+
+    grid->bounding_upper_left = coord;
+    grid->bounding_bottom_right = coord;
   }
+
+  if (coord.x < grid->bounding_upper_left.x) { grid->bounding_upper_left.x = coord.x; }
+  if (coord.y < grid->bounding_upper_left.y) { grid->bounding_upper_left.y = coord.y; }
+  if (coord.x > grid->bounding_bottom_right.x) { grid->bounding_bottom_right.x = coord.x; }
+  if (coord.y > grid->bounding_bottom_right.y) { grid->bounding_bottom_right.y = coord.y; }
 
   coord_t adjusted_coord = to_grid_native(grid, coord);
 

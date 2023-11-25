@@ -23,7 +23,8 @@ typedef struct dynamic_grid_t {
   // is unset.
   bool has_points;
 
-  // TODO: Add back bounding box.
+  coord_t bounding_upper_left;
+  coord_t bounding_bottom_right;
 
   grid_status *data;
 } dynamic_grid_t;

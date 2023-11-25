@@ -31,6 +31,10 @@ void test_basic() {
   for (size_t i = 0; i < sizeof(to_check) / sizeof(coord_t); ++i) {
     assert(get_point(grid, to_check[i]) == UNKNOWN);
   }
+  assert(grid->bounding_upper_left.x == -20);
+  assert(grid->bounding_upper_left.y == 0);
+  assert(grid->bounding_bottom_right.x == 1000);
+  assert(grid->bounding_bottom_right.y == 20);
   destroy_dynamic_grid(grid);
 }
 
