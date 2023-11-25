@@ -91,6 +91,10 @@ void print_grid(dynamic_grid_t *grid, coord_t current) {
         printf("#");
       } else if (status == TARGET) {
         printf("T");
+      } else if (status == OXYGEN) {
+        printf("O");
+      } else {
+        printf("?");
       }
     }
     printf("\n");
@@ -163,6 +167,53 @@ int64_t visit_node(
   return -1;
 }
 
+/* Returns true if oxygen has not filled the entire room, false otherwise.
+ * 
+ * stack contains the set of tiles that will gain oxygen on this tick.
+ *
+ * After the function has run, stack contains the next set of candidates.
+ */
+bool run_oxygen_tick(dynamic_grid_t *grid, stack_t *stack) {
+  stack_t *next_candidates = create_stack();
+
+  while (!stack_empty(stack)) {
+    coord_t next = stack_pop(stack);
+    set_point(grid, next, OXYGEN);
+    for (size_t i = 0; i < DIRECTION_COUNT; ++i) {
+      coord_t candidate = coord_add(next, directions[i]);
+      if (get_point(grid, candidate) == EMPTY) {
+        stack_push(next_candidates, candidate);
+      }
+    }
+  }
+
+  // Copy tmp array into outparam.
+  while (!stack_empty(next_candidates)) {
+    stack_push(stack, stack_pop(next_candidates));
+  }
+
+  destroy_stack(next_candidates);
+
+  return !stack_empty(stack);
+}
+
+/* Returns the number of minutes to fully fill the room with oxygen.
+ *
+ */
+size_t fill_with_oxygen(dynamic_grid_t *grid, coord_t target) {
+  size_t minutes = 0;
+  stack_t *stack = create_stack();
+  stack_push(stack, target);
+  while (run_oxygen_tick(grid, stack)) {
+    print_grid(grid, target);
+    usleep(1000000 / FPS);
+    minutes += 1;
+  }
+  destroy_stack(stack);
+
+  return minutes;
+}
+
 int main(int argc, int **argv) {
   char *fps_str = getenv("FPS");
   if (fps_str != NULL && strlen(fps_str) > 0) {
@@ -187,9 +238,7 @@ int main(int argc, int **argv) {
   printf("Distance: %d\n", dist);
   printf("Target location: (%jd, %jd)\n", target.x, target.y);
 
-  // Stack for BFS of part 2.
-  stack_t *stack = create_stack();
-  destroy_stack(stack);
+  printf("Time to fill: %d\n", fill_with_oxygen(grid, target));
 
   destroy_dynamic_grid(grid);
   destroy_process(process);
