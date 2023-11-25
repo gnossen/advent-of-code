@@ -230,6 +230,7 @@ static void perform_binary_op(process_t *process, int64_t instruction,
 
 
 process_status execute(process_t *process) {
+  process->status = RUNNING;
   while (process->ip_offset < process->len) {
     char *debug1202 = getenv("DEBUG1202");
     if (debug1202 != NULL && strlen(debug1202) > 0) {
@@ -248,6 +249,7 @@ process_status execute(process_t *process) {
       perform_binary_op(process, bytecode, mult_op);
     } else if (this_opcode == k_input_op) {
       if (buffer_empty(process->input)) {
+        process->status = AWAITING_READ;
         return AWAITING_READ;
       }
       advance(process->len, &(process->ip_offset), 2);
@@ -256,6 +258,7 @@ process_status execute(process_t *process) {
       write_based_on_arg(process, mode, process->ip_offset - 1, read_value);
     } else if (this_opcode == k_output_op) {
       if (buffer_full(process->output)) {
+        process->status = AWAITING_WRITE;
         return AWAITING_WRITE;
       }
       advance(process->len, &(process->ip_offset), 2);
@@ -298,6 +301,7 @@ process_status execute(process_t *process) {
     }
     process->step += 1;
   }
+  process->status = HALTED;
   return HALTED;
 }
 
@@ -319,6 +323,7 @@ process_t *instantiate_process_from_buffer(program_t program, int64_t *buffer,
   process->output = make_buffer(k_io_size);
   process->step = 0;
   process->relative_base = 0;
+  process->status = UNSTARTED;
   return process;
 }
 

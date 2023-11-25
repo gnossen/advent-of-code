@@ -44,7 +44,17 @@ typedef struct program_t {
   size_t buffer_len;
 } program_t;
 
-// typedef program_t process_t;
+typedef enum process_status {
+  UNSTARTED,
+  RUNNING,
+  HALTED,
+
+  /* The process is waiting to write to i/o */
+  AWAITING_WRITE,
+
+  /* The process is waiting to read from i/o */
+  AWAITING_READ
+} process_status;
 
 typedef struct process_t {
   int64_t *data;
@@ -56,6 +66,7 @@ typedef struct process_t {
   buffer_t *output;
   size_t step;
   int64_t relative_base;
+  process_status status;
 } process_t;
 
 process_t *instantiate_process_from_buffer(program_t program, int64_t *buffer,
@@ -78,11 +89,6 @@ program_t program_from_text_file(FILE *f);
 // NOTE: It is the caller's responsibility to free the program's memory.
 program_t program_from_text_filepath(const char *path);
 
-typedef enum process_status {
-  HALTED,
-  AWAITING_WRITE,
-  AWAITING_READ
-} process_status;
 
 process_status execute(process_t *process);
 
