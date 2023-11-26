@@ -32,6 +32,9 @@ bool buffer_empty(const buffer_t *buffer);
 bool buffer_full(const buffer_t *buffer);
 void buffer_clear(buffer_t *buffer);
 
+// Returns the distance between the writer and the reader.
+size_t buffer_size(const buffer_t *buffer);
+
 // NOTE: UB results when buffer_read is called on an empty buffer.
 int64_t buffer_read(buffer_t *buffer);
 
@@ -129,5 +132,7 @@ int64_t binary_to_bcd(int64_t instruction);
  * Returns true if a value was read, false otherwise. The value is placed in next.
  */
 bool execute_and_read(process_t *process, int64_t *next);
+
+void buffer_write_ascii(buffer_t *buffer, const char* str);
 
 #endif

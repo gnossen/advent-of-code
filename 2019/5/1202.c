@@ -232,6 +232,7 @@ static void perform_binary_op(process_t *process, int64_t instruction,
 
 
 process_status execute(process_t *process) {
+  // printf("Execute called\n");
   process->status = RUNNING;
   while (process->ip_offset < process->len) {
     char *debug1202 = getenv("DEBUG1202");
@@ -379,6 +380,13 @@ void buffer_clear(buffer_t *buffer) {
   buffer->write_index = 0;
 }
 
+size_t buffer_size(const buffer_t *buffer) {
+  if (buffer->write_index > buffer->read_index) {
+    return buffer->write_index - buffer->read_index;
+  }
+  return (buffer->len - buffer->read_index) + buffer->write_index;
+}
+
 int64_t buffer_read(buffer_t *buffer) {
   return buffer->data[buffer->read_index++ % buffer->len];
 }
@@ -457,8 +465,10 @@ int64_t binary_to_bcd(int64_t instruction) {
 }
 
 bool execute_and_read(process_t *process, int64_t *next) {
+  // printf("execute_and_read called\n");
   if (buffer_empty(process->output)) {
     if (process->status == AWAITING_READ) {
+      // printf("process is AWAITING_READ\n");
       return false;
     }
 
@@ -476,4 +486,10 @@ bool execute_and_read(process_t *process, int64_t *next) {
 
   *next = buffer_read(process->output);
   return true;
+}
+
+void buffer_write_ascii(buffer_t *buffer, const char* str) {
+  for (const char* p = str; *p != '\0'; ++p) {
+    buffer_write(buffer, (int64_t)*p);
+  }
 }

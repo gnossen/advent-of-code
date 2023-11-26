@@ -20,7 +20,6 @@ private:
   class UntilAwaitingWriteIterator {
   private:
     int64_t value;
-    bool value_cached;
     bool is_eof;
     process_t *process;
 
@@ -44,6 +43,7 @@ public:
   ~Process();
 
   void write(int64_t value);
+  void write(const std::string& str);
   int64_t read();
   process_status exec();
 
@@ -51,5 +51,7 @@ public:
 
   UntilAwaitingWriteIterator begin();
   UntilAwaitingWriteIterator end();
+
+  void set_address(size_t offset, int64_t value);
 };
 #endif // __1202PP__

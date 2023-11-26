@@ -18,6 +18,10 @@ void Process::write(int64_t value) {
   buffer_write(process->input, value);
 }
 
+void Process::write(const std::string& str) {
+  buffer_write_ascii(process->input, str.c_str());
+}
+
 int64_t Process::read() {
   return buffer_read(process->output);
 }
@@ -32,17 +36,20 @@ process_status Process::exec() {
 }
 
 void Process::UntilAwaitingWriteIterator::fetch() {
-  if (!is_eof && !value_cached) {
+  if (!is_eof) {
     is_eof = !execute_and_read(process, &value);
-    value_cached = true;
   }
 }
 
 Process::UntilAwaitingWriteIterator::UntilAwaitingWriteIterator(process_t *process) :
   value(0),
-  value_cached(false),
   is_eof(false),
-  process(process) {}
+  process(process)
+{
+  if (process != nullptr) {
+    fetch();
+  }
+}
 
 bool Process::UntilAwaitingWriteIterator::operator==(const UntilAwaitingWriteIterator& other) {
   if (this->is_eof && other.is_eof) {
@@ -63,13 +70,10 @@ Process::UntilAwaitingWriteIterator& Process::UntilAwaitingWriteIterator::operat
     exit(1);
   }
   fetch(); // In case operator* was never called.
-  value = 0;
-  value_cached = false;
   return *this;
 }
 
 int64_t Process::UntilAwaitingWriteIterator::operator*() {
-  fetch();
   return value;
 }
 
@@ -85,4 +89,8 @@ Process::UntilAwaitingWriteIterator Process::begin() {
 
 Process::UntilAwaitingWriteIterator Process::end() {
   return UntilAwaitingWriteIterator::end_sentinel();
+}
+
+void Process::set_address(size_t offset, int64_t value) {
+  process->data[offset] = value;
 }
