@@ -1,6 +1,7 @@
 #include "1202.h"
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 static const int64_t k_add_op = 1;
 static const int64_t k_mult_op = 2;
@@ -27,7 +28,7 @@ void pretty_print_program(FILE *f, program_t program, int print_offsets) {
   int64_t ip_offset = 0;
   do {
     if (print_offsets) {
-      fprintf(f, "%d: ", ip_offset);
+      fprintf(f, "%jd: ", ip_offset);
     }
     int64_t this_opcode = opcode(binary_to_bcd(*(program.data + ip_offset)));
     if (this_opcode == k_halt_op) {
@@ -64,8 +65,8 @@ void debug_print_process(const char* path, process_t* process) {
     .len = process->len,
     .buffer_len = process->buffer_len,
   };
-  fprintf(f, "IP: %d\n", process->ip_offset);
-  fprintf(f, "Relative base: %d\n", process->relative_base);
+  fprintf(f, "IP: %jd\n", process->ip_offset);
+  fprintf(f, "Relative base: %jd\n", process->relative_base);
   pretty_print_program(f, faux_program, 1);
   fclose(f);
 }
@@ -77,7 +78,7 @@ static size_t smallest_power_of_2_greater_than(size_t n) {
 }
 
 program_t program_from_text_file(FILE *f) {
-  int64_t *data = malloc(sizeof(int64_t) * k_max_program_size);
+  int64_t *data = (int64_t*)malloc(sizeof(int64_t) * k_max_program_size);
   int64_t *rp = data;
   char buffer[k_buffer_size];
   char *bp = buffer;
@@ -115,7 +116,7 @@ program_t program_from_text_file(FILE *f) {
   // Shrink down to the smallest power of 2 big enough to contain the program.
   size_t program_len = rp - data;
   size_t buffer_size = smallest_power_of_2_greater_than(program_len);
-  data = realloc(data, sizeof(int64_t) * buffer_size);
+  data = (int64_t*)realloc(data, sizeof(int64_t) * buffer_size);
 
   // Set everything beyond the program to 0.
   memset(data + program_len, 0, sizeof(int64_t) * (buffer_size - program_len));
@@ -155,15 +156,16 @@ typedef int64_t (*binary_op)(process_t *process, int64_t a, int64_t b);
 
 void process_buffer_grow(process_t *process, size_t new_size) {
     size_t old_size = process->buffer_len;
-    process->data = realloc(process->data, sizeof(int64_t) * new_size);
+    process->data = (int64_t*)realloc(process->data, sizeof(int64_t) * new_size);
     memset(process->data + old_size, 0, sizeof(int64_t) * (new_size - old_size));
     process->buffer_len = new_size;
 }
 
 void process_grow(process_t *process, int64_t offset) {
-    if (offset > process->buffer_len) {
+    if (offset >= process->buffer_len) {
         process_buffer_grow(process, smallest_power_of_2_greater_than(offset));
     }
+    assert(process->buffer_len >= offset + 1);
     process->len = offset + 1;
 }
 
@@ -236,7 +238,7 @@ process_status execute(process_t *process) {
     if (debug1202 != NULL && strlen(debug1202) > 0) {
       const size_t debug_path_len = 256;
       char debug_path[debug_path_len];
-      snprintf(debug_path, debug_path_len, "debug/%d.out", process->step);
+      snprintf(debug_path, debug_path_len, "debug/%zu.out", process->step);
       debug_print_process(debug_path, process);
     }
 
@@ -295,7 +297,7 @@ process_status execute(process_t *process) {
     } else if (this_opcode == k_halt_op) {
       return HALTED;
     } else {
-      fprintf(stderr, "Unrecognized opcode %jd in instruction %jd at location %d.\n",
+      fprintf(stderr, "Unrecognized opcode %jd in instruction %jd at location %jd.\n",
               this_opcode, instruction, process->ip_offset);
       exit(1);
     }
@@ -309,12 +311,12 @@ process_t *instantiate_process_from_buffer(program_t program, int64_t *buffer,
                                            size_t buffer_len) {
   if (buffer_len < program.len) {
     fprintf(stderr,
-            "Attempt to execute program of length %d in buffer of length %d.\n",
+            "Attempt to execute program of length %zu in buffer of length %zu.\n",
             program.len, buffer_len);
     exit(1);
   }
   memcpy(buffer, program.data, sizeof(int64_t) * program.len);
-  process_t *process = malloc(sizeof(process_t));
+  process_t *process = (process_t*)malloc(sizeof(process_t));
   process->data = buffer;
   process->len = program.len;
   process->buffer_len = buffer_len;
@@ -336,7 +338,7 @@ void reset_process(const program_t program, process_t *process) {
 
 // NOTE: It is the caller's responsibility to free the memory in this process.
 process_t *instantiate_process(program_t program) {
-  int64_t *buffer = malloc(sizeof(int64_t) * program.len);
+  int64_t *buffer = (int64_t*)malloc(sizeof(int64_t) * program.len);
   return instantiate_process_from_buffer(program, buffer, program.len);
 }
 
@@ -350,8 +352,8 @@ void destroy_process(process_t *process) {
 void destroy_program(program_t program) { free(program.data); }
 
 buffer_t *make_buffer(size_t size) {
-  int64_t *data = malloc(sizeof(int64_t) * size);
-  buffer_t *buffer = malloc(sizeof(buffer_t));
+  int64_t *data = (int64_t*)malloc(sizeof(int64_t) * size);
+  buffer_t *buffer = (buffer_t*)malloc(sizeof(buffer_t));
   buffer->data = data;
   buffer->read_index = 0;
   buffer->write_index = 0;
@@ -452,4 +454,26 @@ int64_t binary_to_bcd(int64_t instruction) {
     radix *= 10;
   }
   return bytecode;
+}
+
+bool execute_and_read(process_t *process, int64_t *next) {
+  if (buffer_empty(process->output)) {
+    if (process->status == AWAITING_READ) {
+      return false;
+    }
+
+    if (process->status == UNSTARTED || process->status == AWAITING_WRITE) {
+      execute(process);
+      if (process->status == HALTED) {
+        return false;
+      }
+      if (process->status == AWAITING_WRITE && buffer_empty(process->output)) {
+        fprintf(stderr, "Process returned AWAITING_READ without returning any output.\n");
+        exit(1);
+      }
+    }
+  }
+
+  *next = buffer_read(process->output);
+  return true;
 }

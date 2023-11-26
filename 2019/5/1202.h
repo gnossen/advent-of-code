@@ -124,4 +124,10 @@ void bytecode_to_decimal(int64_t instruction, char *decimal, size_t buffer_len);
 
 int64_t binary_to_bcd(int64_t instruction);
 
+/* Reads a single integer, possibly executing the process to generate output.
+ *
+ * Returns true if a value was read, false otherwise. The value is placed in next.
+ */
+bool execute_and_read(process_t *process, int64_t *next);
+
 #endif
