@@ -13,7 +13,7 @@ CCFLAGS=${CFLAGS}
 %.o: %.cc
 	${CC} ${CCFLAGS} -c $< -o $@
 
-camera: camera.o ../5/1202pp.o ../5/1202.o
+camera: camera.o ../5/1202pp.o ../5/1202.o grid.o
 	${CC} ${CCFLAGS} $^ -o $@
 
 test/test_grid: test/test_grid.o grid.o

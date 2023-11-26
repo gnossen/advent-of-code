@@ -18,3 +18,8 @@ Coord Coord::operator/(int64_t scalar) const {
 Coord Coord::operator*(int64_t scalar) const {
   return Coord(x * scalar, y * scalar);
 }
+
+std::ostream& operator<<(std::ostream& os, const Coord& c) {
+  os << "(" << c.x << ", " << c.y << ")";
+  return os;
+}

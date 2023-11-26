@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cassert>
 #include <cstdlib>
+#include <iostream>
 
 struct Coord {
 public:
@@ -18,7 +19,11 @@ public:
   Coord operator-(Coord other) const;
   Coord operator/(int64_t scalar) const;
   Coord operator*(int64_t scalar) const;
+
+  friend std::ostream& operator<<(std::ostream& os, const Coord& x);
 };
+
+std::ostream& operator<<(std::ostream& os, const Coord& x);
 
 template <typename T>
 class Grid {
