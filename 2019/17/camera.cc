@@ -348,7 +348,7 @@ private:
   }
 
   void visit(Coord coord, size_t* visited_count) {
-    if (visited(coord)) {
+    if (!visited(coord)) {
       *visited_count += 1;
     }
     grid_[coord].visited++;
@@ -356,6 +356,50 @@ private:
 
   void unvisit(Coord coord) {
     grid_[coord].visited--;
+  }
+
+  // Returns whether or not, given the current state of the grid, whether it's
+  // possible to visit every point without unvisiting nodes.
+  bool unreachable_points(Coord current) const {
+    // TODO: Maybe reuse a single instance to avoid allocations?
+
+    // Create a shadow graph used to do DFS
+    size_t total_nodes = 0;
+    Grid<grid_type> sg;
+    for (int64_t y = grid_.bounding_upper_left.y; y <= grid_.bounding_bottom_right.y; ++y) {
+      for (int64_t x = grid_.bounding_upper_left.x; x <= grid_.bounding_bottom_right.x; ++x) {
+        Coord c(x, y);
+        grid_type g = grid_.at(c);
+        if (g.kind == SCAFFOLD && (g.visited == 0 || is_intersection(c))) {
+          sg[c] = SCAFFOLD;
+          if (!is_intersection(c)) {
+            total_nodes += 1;
+          }
+        }
+      }
+    }
+
+    std::vector<Coord> to_visit = {current};
+    size_t visited_count = 0;
+    while (to_visit.size() > 0) {
+      Coord c = to_visit.back();
+      to_visit.pop_back();
+      if (sg[c].visited > 0) {
+        continue;
+      }
+      sg[c].visited = 1;
+      if (!is_intersection(c)) {
+        visited_count++;
+      }
+      for (Coord dir : directions) {
+        Coord candidate = c + dir;
+        if (sg[candidate].kind == SCAFFOLD && sg[candidate].visited == 0) {
+          to_visit.push_back(candidate);
+        }
+      }
+    }
+
+    return visited_count != total_nodes;
   }
 
   std::vector<Coord> get_next_coord_candidates(Coord current, Coord previous) const {
@@ -429,7 +473,7 @@ public:
   // TODO: Figure out interface later.
   void plan();
 
-  void plan(Coord current, Coord current_heading, Coord previous, const StackLinkedList<std::vector<Movement>>* previous_movements, size_t visited_count, size_t total_scaffold, std::vector<std::vector<Movement>>* possible_paths);
+  void plan(Coord current, Coord current_heading, Coord previous, const StackLinkedList<std::vector<Movement>>* previous_movements, size_t visited_count, size_t total_scaffold, bool is_branch, std::vector<std::vector<Movement>>* possible_paths);
 
   void print(Coord current, Coord current_heading) const {
     print_grid(grid_, current, current_heading);
@@ -440,18 +484,26 @@ public:
   }
 };
 
-void Scene::plan(Coord current, Coord current_heading, Coord previous, const StackLinkedList<std::vector<Movement>>* previous_movements, size_t visited_count, size_t total_scaffold, std::vector<std::vector<Movement>>* possible_paths) {
+void Scene::plan(Coord current, Coord current_heading, Coord previous, const StackLinkedList<std::vector<Movement>>* previous_movements, size_t visited_count, size_t total_scaffold, bool is_branch, std::vector<std::vector<Movement>>* possible_paths) {
   StackLinkedList<std::vector<Movement>> m(previous_movements);
 
+  // Maybe just do this periodically instead of just at the branches?
+  if (is_branch && unreachable_points(current)) {
+    // Do not waste time exploring branches that are guaranteed not to work.
+    return;
+  }
+
   visit(current, &visited_count);
+
+
 
   // TODO: If going to the next node would create unreachable points, abort this branch.
   // Only do this check when we branch, as this will be expensive.
 
   assert(grid_.at(current).kind == SCAFFOLD);
 
-  print(current, current_heading);
-  usleep(1000000 / FPS);
+  // print(current, current_heading);
+  // usleep(1000000 / FPS);
 
   std::vector<Coord> next_candidates = get_next_coord_candidates(current, previous);
   if (next_candidates.size() == 0) {
@@ -460,26 +512,30 @@ void Scene::plan(Coord current, Coord current_heading, Coord previous, const Sta
       // We've visited all scaffolding tiles. Output path.
       std::vector<Movement> path = compactify(flatten_movement_list(m.get()));
 
-      std::cout << "Path: " << path << std::endl;
+      // std::cout << "Path: " << path << std::endl;
       possible_paths->push_back(path);
     }
     // If we're at a dead end. Output nothing.
+  } else if (next_candidates.size() == 1) {
+    Coord next = next_candidates[0];
+    Coord new_heading;
+    move(current, current_heading, next, &new_heading, &(*m));
+    plan(next, new_heading, current, &m, visited_count, total_scaffold, false, possible_paths);
   } else {
     for (Coord next : next_candidates) {
       Coord new_heading;
       move(current, current_heading, next, &new_heading, &(*m));
-      plan(next, new_heading, current, &m, visited_count, total_scaffold, possible_paths);
+      plan(next, new_heading, current, &m, visited_count, total_scaffold, true, possible_paths);
     }
   }
 
-  // TODO: Is it okay to unvisit intersections?
   unvisit(current);
 }
 
 void Scene::plan() {
   // TODO: Incrementally output rather than storing them all in memory.
   std::vector<std::vector<Movement>> possible_paths;
-  plan(robot_location_, robot_heading_, robot_location_, nullptr, 0, get_total_scaffold(), &possible_paths);
+  plan(robot_location_, robot_heading_, robot_location_, nullptr, 0, get_total_scaffold(), false, &possible_paths);
 
   for (const auto& possible_path : possible_paths) {
     std::cout << possible_path << std::endl;

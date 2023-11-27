@@ -22,6 +22,7 @@ public:
 
   bool operator==(const Coord& other) const;
   bool operator!=(const Coord& other) const;
+  bool operator<(const Coord& other) const;
 
   friend std::ostream& operator<<(std::ostream& os, const Coord& x);
 };

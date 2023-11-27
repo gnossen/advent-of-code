@@ -27,6 +27,16 @@ bool Coord::operator!=(const Coord& other) const {
   return !(*this == other);
 }
 
+bool Coord::operator<(const Coord& other) const {
+  if (x < other.x) {
+    return true;
+  }
+  if (x > other.x) {
+    return false;
+  }
+  return y < other.y;
+}
+
 std::ostream& operator<<(std::ostream& os, const Coord& c) {
   os << "(" << c.x << ", " << c.y << ")";
   return os;
