@@ -19,7 +19,16 @@ Coord Coord::operator*(int64_t scalar) const {
   return Coord(x * scalar, y * scalar);
 }
 
+bool Coord::operator==(const Coord& other) const {
+  return x == other.x && y == other.y;
+}
+
+bool Coord::operator!=(const Coord& other) const {
+  return !(*this == other);
+}
+
 std::ostream& operator<<(std::ostream& os, const Coord& c) {
   os << "(" << c.x << ", " << c.y << ")";
   return os;
 }
+

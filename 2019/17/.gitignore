@@ -1,2 +1,5 @@
 *.o
 camera
+puzzle.grid
+sample.path
+test/test_grid

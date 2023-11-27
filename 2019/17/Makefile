@@ -4,7 +4,7 @@ EXECUTABLES=camera test/test_grid
 all: ${EXECUTABLES}
 
 CC=g++
-CFLAGS=-I../5 -g -fsanitize=address
+CFLAGS=-I../5 -O3 # -fsanitize=address
 CCFLAGS=${CFLAGS}
 
 %.o: %.c

@@ -20,6 +20,9 @@ public:
   Coord operator/(int64_t scalar) const;
   Coord operator*(int64_t scalar) const;
 
+  bool operator==(const Coord& other) const;
+  bool operator!=(const Coord& other) const;
+
   friend std::ostream& operator<<(std::ostream& os, const Coord& x);
 };
 
