@@ -69,7 +69,9 @@ fn parse_prize<'a>(lines: &mut impl Iterator<Item = &'a str>) -> Option<(usize, 
     // TODO: Move to static scope.
     let button_line = Regex::new(r"^Prize: X=([0-9]+), Y=([0-9]+)$").unwrap();
     let (_, [x, y])  = button_line.captures(lines.next()?).unwrap().extract();
-    Some((x.parse().unwrap(), y.parse().unwrap()))
+    let raw_x: usize = x.parse().unwrap();
+    let raw_y: usize = y.parse().unwrap();
+    Some((raw_x + 10000000000000, raw_y + 10000000000000))
 }
 
 fn parse_machine<'a>(lines: &mut impl Iterator<Item = &'a str>) -> Option<Machine> {
