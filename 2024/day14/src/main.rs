@@ -4,6 +4,14 @@ use std::io::{ BufReader, BufRead };
 use regex::Regex;
 use std::collections::HashMap;
 
+const DIRS: &[(i64, i64)] = &[
+    (-1, 0),
+    (0, -1),
+    (1, 0),
+    (0, 1),
+];
+
+
 #[derive(Debug)]
 struct Robot {
     position: (usize, usize),
@@ -55,18 +63,21 @@ fn get_quad(pos: (usize, usize), bounds: (usize, usize)) -> Option<(usize, usize
     ))
 }
 
-fn print_pos(pos: &Vec<(usize, usize)>, bounds: (usize, usize)) {
+fn grid_counts(pos: &Vec<(usize, usize)>, bounds: (usize, usize)) -> Vec<Vec<usize>> {
     let mut counts: Vec<Vec<usize>> = (0..bounds.1).map(
                                         |_y| (0..bounds.0).map(|_x| (0 as usize)).collect()
                                       ).collect();
     for p in pos.iter() {
-        print!("{:#?}\n", p);
         counts[p.1][p.0] += 1;
     }
 
+    counts
+}
+
+fn print_pos(counts: &Vec<Vec<usize>>, bounds: (usize, usize)) {
     for row in counts {
         for col in row {
-            if col == 0 {
+            if *col == 0 {
                 print!(".")
             } else {
                 print!("{}", col)
@@ -75,6 +86,46 @@ fn print_pos(pos: &Vec<(usize, usize)>, bounds: (usize, usize)) {
         print!("\n")
     }
     print!("\n")
+}
+
+fn adjacent_dim(us: usize, s: i64, max: usize) -> Option<usize> {
+    let cs = (us as i64) + s;
+    if cs < 0 {
+        return None;
+    }
+    let cu = cs as usize;
+    if cu >= max {
+        return None;
+    }
+    Some(cu)
+}
+
+fn adjacent(c: (usize, usize), dir: (i64, i64), bounds: (usize, usize)) -> Option<(usize, usize)> {
+    let x = adjacent_dim(c.0, dir.0, bounds.0)?;
+    let y = adjacent_dim(c.1, dir.1, bounds.1)?;
+    Some((x, y))
+}
+
+fn adjacent_cells(x: (usize, usize), bounds: (usize, usize)) -> impl Iterator<Item = (usize, usize)> {
+    DIRS.iter()
+        .map(move |dir| adjacent(x, dir.clone(), bounds.clone()))
+        .flatten()
+}
+
+fn count_adjacencies(counts: &Vec<Vec<usize>>, bounds: (usize, usize)) -> usize {
+    let mut adjacencies: usize = 0;
+    for y in 0..bounds.1 {
+        for x in 0..bounds.0 {
+            if counts[y][x] > 0 {
+                for adj in adjacent_cells((x, y), bounds) {
+                    if counts[adj.1][adj.0] > 0 {
+                        adjacencies += 1;
+                    }
+                }
+            }
+        }
+    }
+    adjacencies
 }
 
 fn main() -> std::io::Result<()> {
@@ -97,32 +148,57 @@ fn main() -> std::io::Result<()> {
                                 .map(parse_robot)
                                 .collect();
 
+    let mut best_iteration = 0;
+    let mut best_adjacencies = 0;
+
+    // TODO: This can be made faster by reusing the grid across iterations.
+    for i in 0..10000 {
+        // print!("Seconds: {}\n", i);
+        let updated: Vec<(usize, usize)> = robots.iter()
+                                                .map(|r| r.forecast(bounds, i))
+                                                .collect();
+        let counts = grid_counts(&updated, bounds);
+        let adjacencies = count_adjacencies(&counts, bounds);
+        if adjacencies > best_adjacencies {
+            best_iteration = i;
+            best_adjacencies = adjacencies;
+        }
+        // print_pos(&updated, bounds);
+    }
+
     let updated: Vec<(usize, usize)> = robots.iter()
-                                            .map(|r| r.forecast(bounds, 100))
+                                            .map(|r| r.forecast(bounds, best_iteration))
                                             .collect();
-    // print_pos(&updated, bounds);
+    let counts = grid_counts(&updated, bounds);
+    print!("Seconds: {}\n", best_iteration);
+    print_pos(&counts, bounds);
 
-    // print!("Updated: {:#?}\n", updated);
-    let quadrants: Vec<(usize, usize)> = (0..2).map(move |x| (0..2).map(move |y| (x, y))).flatten().collect();
-    // print!("Quadrants: {:#?}\n", quadrants);
-    let mut quadrant_count: HashMap<(usize, usize), usize> = quadrants.iter()
-                                            .fold(HashMap::<(usize, usize), usize>::new(),
-                                                |mut acc, quad| { acc.entry(*quad).or_insert(0); acc } );
+    // let updated: Vec<(usize, usize)> = robots.iter()
+    //                                         .map(|r| r.forecast(bounds, 100))
+    //                                         .collect();
+    // // print_pos(&updated, bounds);
 
-    let quads: Vec<Option<(usize, usize)>> = updated.iter()
-        .map(|pos| get_quad(pos.clone(), bounds) )
-        .collect();
-    // print!("Quads: {:#?}\n", quads);
+    // // print!("Updated: {:#?}\n", updated);
+    // let quadrants: Vec<(usize, usize)> = (0..2).map(move |x| (0..2).map(move |y| (x, y))).flatten().collect();
+    // // print!("Quadrants: {:#?}\n", quadrants);
+    // let mut quadrant_count: HashMap<(usize, usize), usize> = quadrants.iter()
+    //                                         .fold(HashMap::<(usize, usize), usize>::new(),
+    //                                             |mut acc, quad| { acc.entry(*quad).or_insert(0); acc } );
+
+    // let quads: Vec<Option<(usize, usize)>> = updated.iter()
+    //     .map(|pos| get_quad(pos.clone(), bounds) )
+    //     .collect();
+    // // print!("Quads: {:#?}\n", quads);
 
 
-    updated.iter()
-        .map(|pos| get_quad(pos.clone(), bounds) )
-        .flatten()
-        .for_each(|quad| { quadrant_count.entry(quad).and_modify(|q| *q += 1); });
+    // updated.iter()
+    //     .map(|pos| get_quad(pos.clone(), bounds) )
+    //     .flatten()
+    //     .for_each(|quad| { quadrant_count.entry(quad).and_modify(|q| *q += 1); });
 
-    // print!("Quadrant counts: {:#?}\n", quadrant_count);
+    // // print!("Quadrant counts: {:#?}\n", quadrant_count);
 
-    print!("{}\n", quadrant_count.values().product::<usize>());
+    // print!("{}\n", quadrant_count.values().product::<usize>());
 
     Ok(())
 }
